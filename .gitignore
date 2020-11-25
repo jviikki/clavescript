@@ -1,0 +1,7 @@
+.idea
+node_modules
+build
+dist/bundle.js
+dist/src
+Makefile
+coverage

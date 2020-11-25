@@ -1,0 +1,40 @@
+{
+  "name": "clavescript",
+  "version": "1.0.0",
+  "description": "ClaveScript - A DSL for live-coding music",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "coverage": "jest --coverage",
+    "lint": "gts lint",
+    "clean": "gts clean",
+    "compile": "tsc",
+    "fix": "gts fix",
+    "build": "webpack --config webpack.config.production.js",
+    "build-dev": "webpack --config webpack.config.development.js",
+    "start": "webpack serve --config webpack.config.development.js --open 'Google Chrome'"
+  },
+  "keywords": [
+    "music",
+    "live-coding",
+    "DSL",
+    "programming"
+  ],
+  "author": "Jarkko Viikki <jarkko.viikki@gmail.com>",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@npm/types": "^1.0.1",
+    "@types/jest": "^26.0.15",
+    "@types/node": "^14.11.2",
+    "@types/webmidi": "^2.0.4",
+    "gts": "^3.0.2",
+    "jest": "^26.6.3",
+    "ts-jest": "^26.4.4",
+    "ts-loader": "^8.0.11",
+    "typescript": "^4.0.3",
+    "webpack": "^5.6.0",
+    "webpack-cli": "^4.2.0",
+    "webpack-dev-server": "^3.11.0"
+  }
+}
