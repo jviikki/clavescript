@@ -39,6 +39,20 @@ const setupSequencer: () => Promise<Sequencer> = async () => {
 };
 
 window.addEventListener('load', async () => {
+  const overlay = document.getElementsByClassName(
+    'start-web-audio-overlay'
+  )[0] as HTMLDivElement;
+
+  const overlayClickHandler = async () => {
+    overlay.removeEventListener('click', overlayClickHandler);
+    overlay.style.display = 'none';
+    await setupUI();
+  };
+
+  overlay.addEventListener('click', overlayClickHandler);
+});
+
+const setupUI = async () => {
   const sequencer = await setupSequencer();
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
   codeArea.addEventListener('keydown', e => {
@@ -48,4 +62,21 @@ window.addEventListener('load', async () => {
       execute(codeArea.value, sequencer);
     }
   });
-});
+
+  const runButton = document.getElementsByClassName(
+    'run-button'
+  )[0] as HTMLButtonElement;
+  runButton.addEventListener('click', () => {
+    execute(codeArea.value, sequencer);
+  });
+
+  const clearLogButton = document.getElementsByClassName(
+    'clear-log-button'
+  )[0] as HTMLButtonElement;
+  const logMessages = document.getElementsByClassName(
+    'log-messages'
+  )[0] as HTMLDivElement;
+  clearLogButton.addEventListener('click', () => {
+    logMessages.innerHTML = '';
+  });
+};

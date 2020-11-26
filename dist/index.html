@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="start-web-audio-overlay">
+        <div class="welcome-text">
+            <h2>Welcome to ClaveScript!</h2>
+            <p>Click to start...</p>
+        </div>
+    </div>
+
     <div class="screen">
         <ul class="toolbar">
             <li>
@@ -25,6 +32,22 @@
             <textarea id="code">
 # Write your code here.
 
+tempo 100;
+
+pattern :=
+  { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x := 88 } :=:
+  { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x := 44 } :=:
+  { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x := 25 } :+:
+
+  { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x := 88 } :=:
+  { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x := 44 } :=:
+  { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x := 25 } :+:
+
+  { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x := 88 } :=:
+  { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x := 44 } :=:
+  { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x := 25 };
+
+loop pattern;
 </textarea>
 
             <div class="log-messages">
