@@ -6,12 +6,15 @@ import {createAudioManager} from '../audio';
 import {initializeMIDI, playMidiNote, updateAudioContextTime} from '../midi';
 import {addInstrument} from '../instrument';
 import {createSequencer, Sequencer} from '../sequencer';
+import {createLogger, LogMessage, Logger} from './logger';
 
-const execute: (input: string, sequencer: Sequencer) => void = (
+const execute: (input: string, sequencer: Sequencer, log: Logger) => void = (
   input,
-  sequencer
+  sequencer,
+  log
 ) => {
   console.log('Code to evaluate: ', input);
+  log.i('Evaluating program...');
 
   const tokenizer = createTokenizer(createInputStream(input));
 
@@ -19,9 +22,11 @@ const execute: (input: string, sequencer: Sequencer) => void = (
     const program = parse(tokenizer);
     console.log(program);
     evaluate(program, sequencer);
+    log.i('Evaluation successful');
     printGlobalScope();
   } catch (e) {
     console.log(e);
+    log.e(e);
   }
 };
 
@@ -53,13 +58,34 @@ window.addEventListener('load', async () => {
 });
 
 const setupUI = async () => {
+  const logMessages = document.getElementsByClassName(
+    'log-messages'
+  )[0] as HTMLDivElement;
+
+  const logger = createLogger((msg: LogMessage) => {
+    const elem = document.createElement('P');
+    elem.appendChild(document.createTextNode(msg.msg));
+    switch (msg.level) {
+      case 'info':
+        elem.className = 'log-message log-message-info';
+        break;
+      case 'error':
+        elem.className = 'log-message log-message-error';
+        break;
+      case 'debug':
+        elem.className = 'log-message log-message-debug';
+        break;
+    }
+    logMessages.appendChild(elem);
+  });
+
   const sequencer = await setupSequencer();
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
   codeArea.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
 
-      execute(codeArea.value, sequencer);
+      execute(codeArea.value, sequencer, logger);
     }
   });
 
@@ -67,15 +93,12 @@ const setupUI = async () => {
     'run-button'
   )[0] as HTMLButtonElement;
   runButton.addEventListener('click', () => {
-    execute(codeArea.value, sequencer);
+    execute(codeArea.value, sequencer, logger);
   });
 
   const clearLogButton = document.getElementsByClassName(
     'clear-log-button'
   )[0] as HTMLButtonElement;
-  const logMessages = document.getElementsByClassName(
-    'log-messages'
-  )[0] as HTMLDivElement;
   clearLogButton.addEventListener('click', () => {
     logMessages.innerHTML = '';
   });
