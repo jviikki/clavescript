@@ -84,6 +84,10 @@ textarea#code:focus {
     font-size: 1rem;
 }
 
+.log-messages .log-message.log-message-error {
+    color: #c8675C;
+}
+
 .toolbar {
     display: flex;
     flex-direction: row;
