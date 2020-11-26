@@ -1,0 +1,81 @@
+html {
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    background-color: #3c3f41;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.screen {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 1rem;
+}
+
+.code-ui {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    flex: 1;
+    overflow-y: auto;
+}
+
+textarea#code {
+    background-color: #2b2b2b;
+    color: #a9b7c6;
+    height: 100%;
+    width: 60%;
+    box-sizing: border-box;
+    resize: horizontal;
+    margin-right: 10px;
+    font-size: 1.2rem;
+    border: #767676 solid 1px;
+    padding: 1rem;
+}
+
+textarea#code:focus {
+    outline: none;
+}
+
+.log-messages {
+    border: #767676 solid 1px;
+    flex: 1;
+    background-color: #2b2b2b;
+    padding: 0.5rem;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: scroll;
+}
+
+.log-messages .log-message {
+    color: #a9b7c6;
+    font-family: monospace;
+    margin: 0 0 0.3rem 0;
+    font-size: 1rem;
+}
+
+.toolbar {
+    display: flex;
+    flex-direction: row;
+    list-style-type: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+.toolbar li {
+    margin-right: 1rem;
+}
+
+.toolbar li.clear-log-item {
+    margin-left: auto; /* pull right */
+    margin-right: 0;
+}
