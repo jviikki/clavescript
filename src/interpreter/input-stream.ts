@@ -13,7 +13,7 @@ export type InputStream = {
 export const createInputStream: (input: string) => InputStream = input => {
   let pos = 0,
     line = 1,
-    col = 0;
+    col = 1;
 
   const next = () => {
     if (eof()) return EOF;
@@ -21,7 +21,7 @@ export const createInputStream: (input: string) => InputStream = input => {
     const ch = input[pos++];
     if (ch === '\n') {
       line++;
-      col = 0;
+      col = 1;
     } else {
       col++;
     }
