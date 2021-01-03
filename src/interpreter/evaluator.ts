@@ -9,10 +9,10 @@ import {
   Program,
   StepSequence,
 } from './parser';
-import {Sequence, Sequencer} from '../sequencer';
+import {MusicalEventSource, Sequence, Sequencer} from '../sequencer';
 
 type Scope = {
-  [name: string]: number | Sequence | MusicalProcedure;
+  [name: string]: number | Sequence | MusicalEventSource;
 };
 
 // This object will act as the global scope for variables
@@ -20,14 +20,14 @@ const globalScope: Scope = {};
 
 const assignVariable: (
   name: string,
-  value: number | Sequence | MusicalProcedure
+  value: number | Sequence | MusicalEventSource
 ) => void = (name, value) => {
   globalScope[name] = value;
 };
 
 const getVariable: (
   name: string
-) => number | Sequence | MusicalProcedure = name => globalScope[name];
+) => number | Sequence | MusicalEventSource = name => globalScope[name];
 
 export const printGlobalScope: () => void = () => {
   console.log(globalScope);
@@ -61,7 +61,7 @@ const evaluateAssignment: (exp: Assignment) => void = exp => {
 
 const evaluateIdentifier: (
   exp: Identifier
-) => number | Sequence | MusicalProcedure = exp => getVariable(exp.name);
+) => number | Sequence | MusicalEventSource = exp => getVariable(exp.name);
 
 const evaluateInteger: (exp: Integer) => number = exp => exp.value;
 
@@ -77,9 +77,19 @@ const evaluateIdentifierAsSequence: (exp: Identifier) => Sequence = exp => {
   return id as Sequence;
 };
 
+const evaluateMusicalProcedure: (
+  exp: MusicalProcedure
+) => MusicalEventSource = exp => {
+  return {
+    getSequence(until: number): Sequence {
+      return [];
+    },
+  };
+};
+
 const evaluateAssignmentRightValue: (
   exp: Integer | MusicalExpression | Identifier | MusicalProcedure
-) => number | Sequence | MusicalProcedure = exp => {
+) => number | Sequence | MusicalEventSource = exp => {
   switch (exp.type) {
     case 'identifier':
       return evaluateIdentifier(exp);
@@ -89,7 +99,7 @@ const evaluateAssignmentRightValue: (
     case 'musical_binary':
       return evaluateMusicalExpression(exp);
     case 'musical_procedure':
-      return exp;
+      return evaluateMusicalProcedure(exp);
   }
 };
 

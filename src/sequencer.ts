@@ -20,6 +20,10 @@ type PitchBend = {
 
 export type Sequence = Array<MusicalEvent>;
 
+export type MusicalEventSource = {
+  getSequence(until: number): Sequence;
+};
+
 export type Sequencer = {
   play(): void;
   pause(): void;
