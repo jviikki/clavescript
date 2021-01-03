@@ -17,7 +17,7 @@ export type StepRest = {
 export type Assignment = {
   type: 'assignment';
   left: Identifier;
-  right: Integer | MusicalExpression | Identifier;
+  right: Integer | MusicalExpression | Identifier | MusicalProcedure;
 };
 
 export type StepSequenceAttribute = Assignment;
@@ -35,6 +35,11 @@ export type MusicalBinaryOperator = {
   operator: ':=:' | ':+:';
   left: MusicalExpression;
   right: MusicalExpression;
+};
+
+export type MusicalProcedure = {
+  type: 'musical_procedure';
+  expressions: Expression[];
 };
 
 export type BuiltInCommand = {
@@ -196,15 +201,36 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     };
   };
 
+  const assertSeq: () => void = () => {
+    const token = tokenizer.next();
+    if (!(token.type === TokenType.Keyword && token.value === 'seq')) {
+      throw new Error();
+    }
+  };
+
+  const parseMusicalProcedure: () => MusicalProcedure = () => {
+    assertSeq();
+    assertPunc('{');
+    const expressions = parseExpressionsWhile();
+    assertPunc('}');
+    return {
+      type: 'musical_procedure',
+      expressions: expressions,
+    };
+  };
+
   const parseAssignmentRightValue: () =>
     | Integer
     | MusicalExpression
-    | Identifier = () => {
+    | Identifier
+    | MusicalProcedure = () => {
     const next = tokenizer.peek();
     if (next.type === TokenType.Integer) {
       return parseInteger();
     } else if (next.type === TokenType.Identifier) {
       return parseIdentifier();
+    } else if (next.type === TokenType.Keyword) {
+      return parseMusicalProcedure();
     } else {
       return parseMusicalExpression();
     }
@@ -287,6 +313,24 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
       expressions.push(parseExpression());
     }
     return expressions;
+  };
+
+  // TODO: Add predicate function as parameter
+  const parseExpressionsWhile: () => Expression[] = () => {
+    const expressions: Expression[] = [];
+
+    for (;;) {
+      const next = tokenizer.peek();
+
+      if (
+        next.type === TokenType.EOF ||
+        (next.type === TokenType.Punctuation && next.value === '}')
+      ) {
+        return expressions;
+      }
+
+      expressions.push(parseExpression());
+    }
   };
 
   const parseProgram: () => Program = () => {

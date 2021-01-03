@@ -5,27 +5,29 @@ import {
   Integer,
   MusicalBinaryOperator,
   MusicalExpression,
+  MusicalProcedure,
   Program,
   StepSequence,
 } from './parser';
 import {Sequence, Sequencer} from '../sequencer';
 
 type Scope = {
-  [name: string]: number | Sequence;
+  [name: string]: number | Sequence | MusicalProcedure;
 };
 
 // This object will act as the global scope for variables
 const globalScope: Scope = {};
 
-const assignVariable: (name: string, value: number | Sequence) => void = (
-  name,
-  value
-) => {
+const assignVariable: (
+  name: string,
+  value: number | Sequence | MusicalProcedure
+) => void = (name, value) => {
   globalScope[name] = value;
 };
 
-const getVariable: (name: string) => number | Sequence = name =>
-  globalScope[name];
+const getVariable: (
+  name: string
+) => number | Sequence | MusicalProcedure = name => globalScope[name];
 
 export const printGlobalScope: () => void = () => {
   console.log(globalScope);
@@ -57,8 +59,9 @@ const evaluateAssignment: (exp: Assignment) => void = exp => {
   assignVariable(exp.left.name, evaluateAssignmentRightValue(exp.right));
 };
 
-const evaluateIdentifier: (exp: Identifier) => number | Sequence = exp =>
-  getVariable(exp.name);
+const evaluateIdentifier: (
+  exp: Identifier
+) => number | Sequence | MusicalProcedure = exp => getVariable(exp.name);
 
 const evaluateInteger: (exp: Integer) => number = exp => exp.value;
 
@@ -75,8 +78,8 @@ const evaluateIdentifierAsSequence: (exp: Identifier) => Sequence = exp => {
 };
 
 const evaluateAssignmentRightValue: (
-  exp: Integer | MusicalExpression | Identifier
-) => number | Sequence = exp => {
+  exp: Integer | MusicalExpression | Identifier | MusicalProcedure
+) => number | Sequence | MusicalProcedure = exp => {
   switch (exp.type) {
     case 'identifier':
       return evaluateIdentifier(exp);
@@ -85,6 +88,8 @@ const evaluateAssignmentRightValue: (
     case 'step_sequence':
     case 'musical_binary':
       return evaluateMusicalExpression(exp);
+    case 'musical_procedure':
+      return exp;
   }
 };
 
