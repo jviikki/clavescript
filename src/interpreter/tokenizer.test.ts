@@ -53,7 +53,11 @@ describe('Tokenizer', () => {
       '   { x - - - | x := 25 }  );\n' +
       '\n' +
       '# Some more comments\n' +
-      '\n' +
+      'pattern2 := seq {\n' +
+      '  play 40;' +
+      '  sleep 2;\n' +
+      '  play 41; \n' +
+      '};\n' +
       'loop pattern; # start looping the pattern';
 
     const expectedTokens: (Token | TokenizerError)[] = [
@@ -472,6 +476,66 @@ describe('Tokenizer', () => {
       {
         type: TokenType.Punctuation,
         value: ')',
+      },
+      {
+        type: TokenType.Punctuation,
+        value: ';',
+      },
+      {
+        type: TokenType.Identifier,
+        value: 'pattern2',
+      },
+      {
+        type: TokenType.Operator,
+        value: ':=',
+      },
+      {
+        type: TokenType.Keyword,
+        value: 'seq',
+      },
+      {
+        type: TokenType.Punctuation,
+        value: '{',
+      },
+      {
+        type: TokenType.Keyword,
+        value: 'play',
+      },
+      {
+        type: TokenType.Integer,
+        value: 40,
+      },
+      {
+        type: TokenType.Punctuation,
+        value: ';',
+      },
+      {
+        type: TokenType.Keyword,
+        value: 'sleep',
+      },
+      {
+        type: TokenType.Integer,
+        value: 2,
+      },
+      {
+        type: TokenType.Punctuation,
+        value: ';',
+      },
+      {
+        type: TokenType.Keyword,
+        value: 'play',
+      },
+      {
+        type: TokenType.Integer,
+        value: 41,
+      },
+      {
+        type: TokenType.Punctuation,
+        value: ';',
+      },
+      {
+        type: TokenType.Punctuation,
+        value: '}',
       },
       {
         type: TokenType.Punctuation,
