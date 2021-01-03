@@ -1,4 +1,10 @@
-import {KeywordString, Tokenizer, TokenType} from './tokenizer';
+import {
+  KeywordString,
+  Token,
+  Tokenizer,
+  TokenizerError,
+  TokenType,
+} from './tokenizer';
 
 export type Integer = {
   type: 'integer';
@@ -211,7 +217,9 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   const parseMusicalProcedure: () => MusicalProcedure = () => {
     assertSeq();
     assertPunc('{');
-    const expressions = parseExpressionsWhile();
+    const expressions = parseExpressionsUntil(
+      token => token.type === TokenType.Punctuation && token.value === '}'
+    );
     assertPunc('}');
     return {
       type: 'musical_procedure',
@@ -307,25 +315,18 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     return expression;
   };
 
-  const parseExpressions: () => Expression[] = () => {
-    const expressions: Expression[] = [];
-    while (!tokenizer.eof()) {
-      expressions.push(parseExpression());
-    }
-    return expressions;
-  };
+  const parseExpressions: () => Expression[] = () =>
+    parseExpressionsUntil(() => false); // Parse until EOF
 
-  // TODO: Add predicate function as parameter
-  const parseExpressionsWhile: () => Expression[] = () => {
+  const parseExpressionsUntil: (
+    predicate: (nextToken: Token | TokenizerError) => boolean
+  ) => Expression[] = predicate => {
     const expressions: Expression[] = [];
 
     for (;;) {
       const next = tokenizer.peek();
 
-      if (
-        next.type === TokenType.EOF ||
-        (next.type === TokenType.Punctuation && next.value === '}')
-      ) {
+      if (next.type === TokenType.EOF || predicate(next)) {
         return expressions;
       }
 
