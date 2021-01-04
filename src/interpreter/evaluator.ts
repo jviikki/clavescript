@@ -80,9 +80,50 @@ const evaluateIdentifierAsSequence: (exp: Identifier) => Sequence = exp => {
 const evaluateMusicalProcedure: (
   exp: MusicalProcedure
 ) => MusicalEventSource = exp => {
+  function* evaluatorGenerator() {
+    let currentTime = 0;
+    let seq: Sequence = [];
+    let until: number = yield seq;
+
+    for (const e of exp.expressions) {
+      if (e.type !== 'cmd')
+        throw Error('Musical expressions can contain only commands');
+      switch (e.name) {
+        case 'play':
+          if (e.arg.type !== 'integer')
+            throw Error('Must be a numerical value');
+          seq.push({
+            type: 'NOTE',
+            startTime: currentTime,
+            duration: 0.25,
+            volume: 64,
+            pitch: e.arg.value,
+            instrument: 'midi',
+          });
+          break;
+        case 'sleep':
+          if (e.arg.type !== 'integer')
+            throw Error('Must be a numerical value');
+          currentTime += e.arg.value;
+          if (currentTime > until) {
+            until = yield seq;
+            seq = [];
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    return [];
+  }
+
+  const evaluator = evaluatorGenerator();
+  evaluator.next(0);
+
   return {
     getSequence(until: number): Sequence {
-      return [];
+      return evaluator.next(until).value;
     },
   };
 };
