@@ -9,7 +9,12 @@ import {
   Program,
   StepSequence,
 } from './parser';
-import {MusicalEventSource, Sequence, Sequencer} from '../sequencer';
+import {
+  MusicalEventSource,
+  Sequence,
+  Sequencer,
+  sequenceToEventSource,
+} from '../sequencer';
 
 type Scope = {
   [name: string]: number | Sequence | MusicalEventSource;
@@ -71,10 +76,12 @@ const evaluateIdentifierAsInteger: (exp: Identifier) => number = exp => {
   return id;
 };
 
-const evaluateIdentifierAsSequence: (exp: Identifier) => Sequence = exp => {
+const evaluateIdentifierAsSequence: (
+  exp: Identifier
+) => Sequence | MusicalEventSource = exp => {
   const id = evaluateIdentifier(exp);
   if (typeof id === 'number') throw Error('Identifier must be sequence');
-  return id as Sequence;
+  return id;
 };
 
 const evaluateMusicalProcedure: (
@@ -105,7 +112,7 @@ const evaluateMusicalProcedure: (
           if (e.arg.type !== 'integer')
             throw Error('Must be a numerical value');
           currentTime += e.arg.value;
-          if (currentTime > until) {
+          while (currentTime > until) {
             until = yield seq;
             seq = [];
           }
@@ -115,15 +122,21 @@ const evaluateMusicalProcedure: (
       }
     }
 
+    yield seq;
+
     return [];
   }
 
+  let isDone = false;
   const evaluator = evaluatorGenerator();
   evaluator.next(0);
 
   return {
     getSequence(until: number): Sequence {
-      return evaluator.next(until).value;
+      if (isDone) return [];
+      const nextEvents = evaluator.next(until);
+      isDone = nextEvents.done || false;
+      return nextEvents.value;
     },
   };
 };
@@ -239,7 +252,10 @@ const evaluateCmd: (exp: BuiltInCommand) => void = exp => {
   switch (exp.name) {
     case 'loop':
       if (exp.arg.type === 'identifier') {
-        sequencer.setSequence(evaluateIdentifierAsSequence(exp.arg));
+        const seq = evaluateIdentifierAsSequence(exp.arg);
+        sequencer.setSequence(
+          seq instanceof Array ? sequenceToEventSource(seq) : seq
+        );
         sequencer.play();
       }
       break;
