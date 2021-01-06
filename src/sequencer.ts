@@ -24,11 +24,29 @@ export type MusicalEventSource = {
   getSequence(until: number): Sequence;
 };
 
+export const sequenceToEventSource: (
+  seq: Sequence
+) => MusicalEventSource = seq => {
+  let pos = 0;
+  return {
+    getSequence(until: number): Sequence {
+      const events = [];
+      for (; pos < seq.length; pos++) {
+        const event = seq[pos];
+        const time = event.type === 'NOTE' ? event.startTime : event.time;
+        if (until < time) break;
+        events.push(event);
+      }
+      return events;
+    },
+  };
+};
+
 export type Sequencer = {
   play(): void;
   pause(): void;
   stop(): void;
-  setSequence(s: Sequence): void;
+  setSequence(s: MusicalEventSource): void;
   setTempo(beatsPerMinute: number): void;
 };
 
@@ -44,15 +62,15 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
   let beatsPerMinute = 120; // Beats (quarter notes) per minute
   let isPlaying = false;
 
-  let sequence: Sequence = s;
+  let eventSource: MusicalEventSource = sequenceToEventSource(s);
   const audio = audioMan;
 
   return {
     play(): void {
-      console.log('Playing sequence:', sequence);
+      // TODO: Add a function to retrieve events from static event source
+      // console.log('Playing sequence:', eventSource);
 
       isPlaying = true;
-      let nextEventIndex = 0;
       let previousPlayheadPos = 0; // In beats, i.e. 1.0 = 1 quarter note
       let previousAbsoluteTime: number = audio.getCurrentTime();
       let currentlyPlayingNotes: Array<NoteOffEvent> = [];
@@ -75,34 +93,24 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
           previousPlayheadPos + absTimeToPlayhead(elapsedAbsTime);
         const scheduleUntil = currentAbsTime + LOOKAHEAD_TIME / 1000;
 
-        // Schedule playback of notes
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          if (nextEventIndex >= sequence.length) break;
-
-          const event = sequence[nextEventIndex];
-          if (event.type !== 'NOTE') {
-            nextEventIndex++;
-            continue;
-          }
-
+        const events = eventSource.getSequence(scheduleUntil);
+        events.forEach(e => {
+          if (e.type !== 'NOTE') return;
           const eventAbsTime =
             currentAbsTime +
-            playheadPosToAbsTime(event.startTime - currentPlayheadPos);
-          if (scheduleUntil < eventAbsTime) break;
+            playheadPosToAbsTime(e.startTime - currentPlayheadPos);
 
-          const note = getInstrument(event.instrument).playNote(
-            event.pitch,
-            event.volume,
+          const note = getInstrument(e.instrument).playNote(
+            e.pitch,
+            e.volume,
             eventAbsTime
           );
+
           currentlyPlayingNotes.push({
             ...note,
-            noteOffPlayheadPos: event.startTime + 0.9 * event.duration,
+            noteOffPlayheadPos: e.startTime + 0.9 * e.duration,
           });
-
-          nextEventIndex++;
-        }
+        });
 
         // Schedule stopping of notes
         for (let i = currentlyPlayingNotes.length - 1; i >= 0; i--) {
@@ -134,8 +142,8 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
       isPlaying = false;
     },
 
-    setSequence(s: [MusicalEvent]): void {
-      sequence = s;
+    setSequence(s: MusicalEventSource): void {
+      eventSource = s;
     },
 
     setTempo(bpm: number): void {

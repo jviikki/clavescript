@@ -1,4 +1,10 @@
-import {Sequence, createSequencer, Note, Sequencer} from './sequencer';
+import {
+  Sequence,
+  createSequencer,
+  Note,
+  Sequencer,
+  MusicalEventSource,
+} from './sequencer';
 import {initializeMIDI, playMidiNote, updateAudioContextTime} from './midi';
 import {createAudioManager} from './audio';
 import {addInstrument} from './instrument';
@@ -127,7 +133,7 @@ window.addEventListener('load', () => {
     setTempo: (beatsPerMinute: number) => {},
     pause: () => {},
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    setSequence: (s: Sequence) => {},
+    setSequence: (s: MusicalEventSource) => {},
   };
 
   initButton.addEventListener('click', async () => {
