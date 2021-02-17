@@ -48,18 +48,16 @@ export const playMidiNote: (
   velocity: number,
   time?: number
 ) => NoteRef = (pitch, velocity, time = undefined) => {
-  midiOutput.send(
-    [0x90, pitch, velocity],
-    time === undefined ? window.performance.now() : time * 1000 + clockOffset
-  );
+  const startTime =
+    time === undefined ? window.performance.now() : time * 1000 + clockOffset;
+  midiOutput.send([0x90, pitch, velocity], startTime);
 
   return {
     stop: (time?: number) => {
+      const stopOffset = 1; // millisecond, make sure that stop event always comes after start
       midiOutput.send(
         [0x80, pitch, velocity],
-        time === undefined
-          ? window.performance.now()
-          : time * 1000 + clockOffset
+        time === undefined ? startTime + stopOffset : time * 1000 + clockOffset
       );
     },
   };
