@@ -96,6 +96,9 @@ const setupUI = async () => {
     execute(codeArea.value, sequencer, logger);
   });
 
+  const stopButton = document.getElementsByClassName('stop-button')[0];
+  stopButton.addEventListener('click', () => sequencer.stop());
+
   const clearLogButton = document.getElementsByClassName(
     'clear-log-button'
   )[0] as HTMLButtonElement;

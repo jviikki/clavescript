@@ -67,7 +67,6 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
 
   return {
     play(): void {
-      // TODO: Add a function to retrieve events from static event source
       // console.log('Playing sequence:', eventSource);
 
       isPlaying = true;
@@ -93,7 +92,10 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
           previousPlayheadPos + absTimeToPlayhead(elapsedAbsTime);
         const scheduleUntil = currentAbsTime + LOOKAHEAD_TIME / 1000;
 
-        const events = eventSource.getSequence(scheduleUntil);
+        const events = eventSource.getSequence(
+          currentPlayheadPos + absTimeToPlayhead(LOOKAHEAD_TIME / 1000)
+        );
+        // console.log(`got ${events.length} events`);
         events.forEach(e => {
           if (e.type !== 'NOTE') return;
           const eventAbsTime =
