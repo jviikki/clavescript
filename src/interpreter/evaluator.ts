@@ -105,6 +105,14 @@ const evaluateMusicalProcedure: (
             duration: 0.25,
             volume: 64,
             pitch: e.arg.value,
+            instrument: 'audio',
+          });
+          seq.push({
+            type: 'NOTE',
+            startTime: currentTime,
+            duration: 0.25,
+            volume: 64,
+            pitch: e.arg.value,
             instrument: 'midi',
           });
           break;
@@ -186,6 +194,14 @@ const evaluateStepSequence: (exp: StepSequence) => Sequence = exp => {
       pitch = attrs[step.name];
       if (pitch === undefined) throw Error(`Unknown identifier: ${step.name}`);
     }
+    seq.push({
+      type: 'NOTE',
+      duration: 0.25,
+      instrument: 'audio',
+      pitch: pitch,
+      volume: 64,
+      startTime: startTime,
+    });
     seq.push({
       type: 'NOTE',
       duration: 0.25,
