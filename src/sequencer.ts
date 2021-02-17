@@ -21,7 +21,7 @@ type PitchBend = {
 export type Sequence = Array<MusicalEvent>;
 
 export type MusicalEventSource = {
-  getSequence(until: number): Sequence;
+  getEventsUntil(playheadPos: number): Sequence;
 };
 
 export const sequenceToEventSource: (
@@ -29,12 +29,12 @@ export const sequenceToEventSource: (
 ) => MusicalEventSource = seq => {
   let pos = 0;
   return {
-    getSequence(until: number): Sequence {
+    getEventsUntil(playheadPos: number): Sequence {
       const events = [];
       for (; pos < seq.length; pos++) {
         const event = seq[pos];
         const time = event.type === 'NOTE' ? event.startTime : event.time;
-        if (until < time) break;
+        if (playheadPos < time) break;
         events.push(event);
       }
       return events;
@@ -92,7 +92,7 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
           previousPlayheadPos + absTimeToPlayhead(elapsedAbsTime);
         const scheduleUntil = currentAbsTime + LOOKAHEAD_TIME / 1000;
 
-        const events = eventSource.getSequence(
+        const events = eventSource.getEventsUntil(
           currentPlayheadPos + absTimeToPlayhead(LOOKAHEAD_TIME / 1000)
         );
         // console.log(`got ${events.length} events`);

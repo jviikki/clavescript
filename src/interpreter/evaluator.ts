@@ -140,9 +140,9 @@ const evaluateMusicalProcedure: (
   evaluator.next(0);
 
   return {
-    getSequence(until: number): Sequence {
+    getEventsUntil(playheadPos: number): Sequence {
       if (isDone) return [];
-      const nextEvents = evaluator.next(until);
+      const nextEvents = evaluator.next(playheadPos);
       isDone = nextEvents.done || false;
       return nextEvents.value;
     },
