@@ -80,7 +80,6 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
 
       const schedule = () => {
         if (!isPlaying) {
-          // TODO: schedule stop after the start event!
           currentlyPlayingNotes.forEach(n => n.stop());
           currentlyPlayingNotes = [];
           return;

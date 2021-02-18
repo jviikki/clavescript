@@ -1,16 +1,16 @@
 import {createTokenizer} from './tokenizer';
 import {createInputStream} from './input-stream';
 import {parse} from './parser';
-import {evaluate, printGlobalScope} from './evaluator';
+import {createEvaluator, Evaluator} from './evaluator';
 import {createAudioManager} from '../audio';
 import {initializeMIDI, playMidiNote, updateAudioContextTime} from '../midi';
 import {addInstrument} from '../instrument';
 import {createSequencer, Sequencer} from '../sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
 
-const execute: (input: string, sequencer: Sequencer, log: Logger) => void = (
+const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
   input,
-  sequencer,
+  evaluator,
   log
 ) => {
   console.log('Code to evaluate: ', input);
@@ -21,9 +21,9 @@ const execute: (input: string, sequencer: Sequencer, log: Logger) => void = (
   try {
     const program = parse(tokenizer);
     console.log(program);
-    evaluate(program, sequencer);
+    evaluator.evaluate(program);
     log.i('Evaluation successful');
-    printGlobalScope();
+    evaluator.printGlobalScope();
   } catch (e) {
     console.log(e);
     log.e(e);
@@ -80,12 +80,13 @@ const setupUI = async () => {
   });
 
   const sequencer = await setupSequencer();
+  const evaluator = createEvaluator(sequencer);
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
   codeArea.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
 
-      execute(codeArea.value, sequencer, logger);
+      execute(codeArea.value, evaluator, logger);
     }
   });
 
@@ -93,7 +94,7 @@ const setupUI = async () => {
     'run-button'
   )[0] as HTMLButtonElement;
   runButton.addEventListener('click', () => {
-    execute(codeArea.value, sequencer, logger);
+    execute(codeArea.value, evaluator, logger);
   });
 
   const stopButton = document.getElementsByClassName('stop-button')[0];
