@@ -1,5 +1,5 @@
 import {AudioManager} from './audio';
-import {getInstrument, NoteRef} from './instrument';
+import {NoteRef, ReadOnlyInstrumentLibrary} from './instrument';
 
 export type MusicalEvent = Note | PitchBend;
 
@@ -52,10 +52,11 @@ export type Sequencer = {
 
 type NoteOffEvent = NoteRef & {noteOffPlayheadPos: number};
 
-export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
-  audioMan,
-  s = []
-) => {
+export const createSequencer: (
+  audio: AudioManager,
+  instruments: ReadOnlyInstrumentLibrary,
+  s?: Sequence
+) => Sequencer = (audio, instruments, s = []) => {
   const SCHEDULER_INTERVAL = 25; // ms
   const LOOKAHEAD_TIME = 100; // ms
 
@@ -63,7 +64,6 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
   let isPlaying = false;
 
   let eventSource: MusicalEventSource = sequenceToEventSource(s);
-  const audio = audioMan;
 
   return {
     play(): void {
@@ -101,11 +101,9 @@ export const createSequencer: (a: AudioManager, s?: Sequence) => Sequencer = (
             currentAbsTime +
             playheadPosToAbsTime(e.startTime - currentPlayheadPos);
 
-          const note = getInstrument(e.instrument).playNote(
-            e.pitch,
-            e.volume,
-            eventAbsTime
-          );
+          const note = instruments
+            .get(e.instrument)
+            .playNote(e.pitch, e.volume, eventAbsTime);
 
           currentlyPlayingNotes.push({
             ...note,
