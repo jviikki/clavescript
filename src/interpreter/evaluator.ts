@@ -14,7 +14,7 @@ import {
   Sequence,
   Sequencer,
   sequenceToEventSource,
-} from '../sequencer';
+} from '../music/sequencer';
 
 export type Evaluator = {
   evaluate(p: Program): void;

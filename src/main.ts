@@ -1,11 +1,15 @@
-import {createTokenizer} from './tokenizer';
-import {createInputStream} from './input-stream';
-import {parse} from './parser';
-import {createEvaluator, Evaluator} from './evaluator';
-import {createAudioManager} from '../audio';
-import {initializeMIDI, playMidiNote, updateAudioContextTime} from '../midi';
-import {createInstrumentLibrary} from '../instrument';
-import {createSequencer, Sequencer} from '../sequencer';
+import {createTokenizer} from './interpreter/tokenizer';
+import {createInputStream} from './interpreter/input-stream';
+import {parse} from './interpreter/parser';
+import {createEvaluator, Evaluator} from './interpreter/evaluator';
+import {createAudioManager} from './music/audio';
+import {
+  initializeMIDI,
+  playMidiNote,
+  updateAudioContextTime,
+} from './music/midi';
+import {createInstrumentLibrary} from './music/instrument';
+import {createSequencer, Sequencer} from './music/sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
 
 const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
