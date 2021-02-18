@@ -12,7 +12,13 @@ type InstrumentStore = {
   [name: string]: Instrument;
 };
 
-const instrumentStore: InstrumentStore = {};
+export type ReadOnlyInstrumentLibrary = {
+  get(name: string): Instrument;
+};
+
+export type InstrumentLibrary = {
+  add(name: string, instrument: Instrument): void;
+} & ReadOnlyInstrumentLibrary;
 
 const nopNoteRef: NoteRef = {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -24,12 +30,21 @@ const nopInstrument = {
   playNote: (pitch: AbsPitch, velocity: number, time?: number) => nopNoteRef,
 };
 
-export const getInstrument: (name: string) => Instrument = name =>
-  instrumentStore[name] ?? nopInstrument;
+export const createInstrumentLibrary: () => InstrumentLibrary = () => {
+  const instrumentStore: InstrumentStore = {};
 
-export const addInstrument: (name: string, instrument: Instrument) => void = (
-  name,
-  instrument
-) => {
-  instrumentStore[name] = instrument;
+  const getInstrument: (name: string) => Instrument = name =>
+    instrumentStore[name] ?? nopInstrument;
+
+  const addInstrument: (name: string, instrument: Instrument) => void = (
+    name,
+    instrument
+  ) => {
+    instrumentStore[name] = instrument;
+  };
+
+  return {
+    get: getInstrument,
+    add: addInstrument,
+  };
 };

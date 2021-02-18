@@ -4,7 +4,7 @@ import {parse} from './parser';
 import {createEvaluator, Evaluator} from './evaluator';
 import {createAudioManager} from '../audio';
 import {initializeMIDI, playMidiNote, updateAudioContextTime} from '../midi';
-import {addInstrument} from '../instrument';
+import {createInstrumentLibrary} from '../instrument';
 import {createSequencer, Sequencer} from '../sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
 
@@ -34,13 +34,14 @@ const setupSequencer: () => Promise<Sequencer> = async () => {
   const audio = createAudioManager();
   await initializeMIDI(audio.getCurrentTime());
   setInterval(() => updateAudioContextTime(audio.getCurrentTime()), 10000);
-  addInstrument('audio', {
+  const instruments = createInstrumentLibrary();
+  instruments.add('audio', {
     playNote: audio.playNote,
   });
-  addInstrument('midi', {
+  instruments.add('midi', {
     playNote: playMidiNote,
   });
-  return createSequencer(audio, []);
+  return createSequencer(audio, instruments, []);
 };
 
 window.addEventListener('load', async () => {
