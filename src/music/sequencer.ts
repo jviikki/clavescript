@@ -46,29 +46,60 @@ export type Sequencer = {
   play(): void;
   pause(): void;
   stop(): void;
-  setSequence(s: MusicalEventSource): void;
+  setLoop(id: string, s: MusicalEventSource): void;
+  unsetLoop(id: string): void;
   setTempo(beatsPerMinute: number): void;
 };
 
 type NoteOffEvent = NoteRef & {noteOffPlayheadPos: number};
 
+type LoopStorage = {
+  setLoop(id: string, loop: MusicalEventSource): void;
+  unsetLoop(id: string): void;
+  unsetAll(): void;
+  getEventsUntil(absTime: number): Sequence;
+};
+
+const createLoopStorage: () => LoopStorage = () => {
+  type LoopMap = {
+    [id: string]: MusicalEventSource;
+  };
+
+  let loops: LoopMap = {};
+
+  return {
+    setLoop(id: string, loop: MusicalEventSource) {
+      loops[id] = loop;
+    },
+
+    unsetLoop(id: string) {
+      delete loops[id];
+    },
+
+    unsetAll() {
+      loops = {};
+    },
+
+    getEventsUntil(absTime: number): Sequence {
+      return Object.values(loops).flatMap(loop => loop.getEventsUntil(absTime));
+    },
+  };
+};
+
 export const createSequencer: (
   audio: AudioManager,
-  instruments: ReadOnlyInstrumentLibrary,
-  s?: Sequence
-) => Sequencer = (audio, instruments, s = []) => {
+  instruments: ReadOnlyInstrumentLibrary
+) => Sequencer = (audio, instruments) => {
   const SCHEDULER_INTERVAL = 25; // ms
   const LOOKAHEAD_TIME = 100; // ms
 
   let beatsPerMinute = 120; // Beats (quarter notes) per minute
   let isPlaying = false;
 
-  let eventSource: MusicalEventSource = sequenceToEventSource(s);
+  const loopStorage = createLoopStorage();
 
   return {
     play(): void {
-      // console.log('Playing sequence:', eventSource);
-
       isPlaying = true;
       let previousPlayheadPos = 0; // In beats, i.e. 1.0 = 1 quarter note
       let previousAbsoluteTime: number = audio.getCurrentTime();
@@ -91,9 +122,10 @@ export const createSequencer: (
           previousPlayheadPos + absTimeToPlayhead(elapsedAbsTime);
         const scheduleUntil = currentAbsTime + LOOKAHEAD_TIME / 1000;
 
-        const events = eventSource.getEventsUntil(
+        const events = loopStorage.getEventsUntil(
           currentPlayheadPos + absTimeToPlayhead(LOOKAHEAD_TIME / 1000)
         );
+
         // console.log(`got ${events.length} events`);
         events.forEach(e => {
           if (e.type !== 'NOTE') return;
@@ -139,10 +171,15 @@ export const createSequencer: (
     stop(): void {
       console.log('Stopped playback');
       isPlaying = false;
+      loopStorage.unsetAll();
     },
 
-    setSequence(s: MusicalEventSource): void {
-      eventSource = s;
+    setLoop(id: string, s: MusicalEventSource) {
+      loopStorage.setLoop(id, s);
+    },
+
+    unsetLoop(id: string) {
+      loopStorage.unsetLoop(id);
     },
 
     setTempo(bpm: number): void {

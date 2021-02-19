@@ -262,12 +262,14 @@ export const createEvaluator: (
     });
   };
 
+  let counter = 0;
   const evaluateCmd: (exp: BuiltInCommand) => void = exp => {
     switch (exp.name) {
       case 'loop':
         if (exp.arg.type === 'identifier') {
           const seq = evaluateIdentifierAsSequence(exp.arg);
-          sequencer.setSequence(
+          sequencer.setLoop(
+            `${++counter}`,
             seq instanceof Array ? sequenceToEventSource(seq) : seq
           );
           sequencer.play();
