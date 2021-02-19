@@ -45,7 +45,7 @@ const setupSequencer: () => Promise<Sequencer> = async () => {
   instruments.add('midi', {
     playNote: playMidiNote,
   });
-  return createSequencer(audio, instruments, []);
+  return createSequencer(audio, instruments);
 };
 
 window.addEventListener('load', async () => {
