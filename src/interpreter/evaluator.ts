@@ -82,7 +82,7 @@ export const createEvaluator: (
   const evaluateMusicalProcedure: (
     exp: MusicalProcedure
   ) => MusicalEventSource = exp => {
-    function* evaluatorGenerator() {
+    function* evaluatorGenerator(): Generator<Sequence, Sequence, number> {
       let currentTime = 0;
       let seq: Sequence = [];
       let until: number = yield seq;
@@ -125,9 +125,7 @@ export const createEvaluator: (
         }
       }
 
-      yield seq;
-
-      return [];
+      return seq;
     }
 
     let isDone = false;
