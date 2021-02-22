@@ -20,24 +20,54 @@ type PitchBend = {
 
 export type Sequence = Array<MusicalEvent>;
 
+export type EventSourceSequence = {
+  events: Sequence;
+  currentPlayheadPos: number;
+  done: boolean;
+};
+
 export type MusicalEventSource = {
-  getEventsUntil(playheadPos: number): Sequence;
+  restart(): void;
+  getEventsUntil(playheadPos: number): EventSourceSequence;
 };
 
 export const sequenceToEventSource: (
   seq: Sequence
 ) => MusicalEventSource = seq => {
+  const minimumStep = 0.25;
   let pos = 0;
+  let currentPlayHeadPos = 0;
+
   return {
-    getEventsUntil(playheadPos: number): Sequence {
+    restart() {
+      pos = 0;
+      currentPlayHeadPos = 0;
+    },
+
+    getEventsUntil(playheadPos: number): EventSourceSequence {
       const events = [];
+      let done = true;
+
       for (; pos < seq.length; pos++) {
         const event = seq[pos];
         const time = event.type === 'NOTE' ? event.startTime : event.time;
-        if (playheadPos < time) break;
+        currentPlayHeadPos =
+          event.type === 'NOTE' ? event.startTime + event.duration : event.time;
+        if (playheadPos < time) {
+          done = false;
+          break;
+        }
         events.push(event);
       }
-      return events;
+
+      const remainder = currentPlayHeadPos % minimumStep;
+      const adjustment = remainder === 0 ? 0 : minimumStep - remainder;
+
+      return {
+        events: events,
+        currentPlayheadPos: currentPlayHeadPos + adjustment,
+        done: done,
+      };
     },
   };
 };
@@ -57,19 +87,27 @@ type LoopStorage = {
   setLoop(id: string, loop: MusicalEventSource): void;
   unsetLoop(id: string): void;
   unsetAll(): void;
-  getEventsUntil(absTime: number): Sequence;
+  getEventsUntil(playheadPosition: number): Sequence;
 };
 
 const createLoopStorage: () => LoopStorage = () => {
+  type Loop = {
+    startPlayheadPosition: number;
+    eventSource: MusicalEventSource;
+  };
+
   type LoopMap = {
-    [id: string]: MusicalEventSource;
+    [id: string]: Loop;
   };
 
   let loops: LoopMap = {};
 
   return {
     setLoop(id: string, loop: MusicalEventSource) {
-      loops[id] = loop;
+      loops[id] = {
+        startPlayheadPosition: 0,
+        eventSource: loop,
+      };
     },
 
     unsetLoop(id: string) {
@@ -80,8 +118,28 @@ const createLoopStorage: () => LoopStorage = () => {
       loops = {};
     },
 
-    getEventsUntil(absTime: number): Sequence {
-      return Object.values(loops).flatMap(loop => loop.getEventsUntil(absTime));
+    getEventsUntil(playheadPosition: number): Sequence {
+      return Object.values(loops).flatMap(loop => {
+        const loopStart = loop.startPlayheadPosition;
+        const seq = loop.eventSource.getEventsUntil(
+          playheadPosition - loopStart
+        );
+        if (seq.done) {
+          loop.startPlayheadPosition += seq.currentPlayheadPos;
+          loop.eventSource.restart();
+        }
+        return seq.events.map(e =>
+          e.type === 'NOTE'
+            ? {
+                ...e,
+                startTime: loopStart + e.startTime,
+              }
+            : {
+                ...e,
+                time: loopStart + e.time,
+              }
+        );
+      });
     },
   };
 };
