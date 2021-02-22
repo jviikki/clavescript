@@ -10,6 +10,7 @@ import {
   StepSequence,
 } from './parser';
 import {
+  EventSourceSequence,
   MusicalEventSource,
   Sequence,
   Sequencer,
@@ -82,10 +83,22 @@ export const createEvaluator: (
   const evaluateMusicalProcedure: (
     exp: MusicalProcedure
   ) => MusicalEventSource = exp => {
-    function* evaluatorGenerator(): Generator<Sequence, Sequence, number> {
+    type SequenceAndPlayheadPos = {
+      sequence: Sequence;
+      playheadPos: number;
+    };
+
+    function* evaluatorGenerator(): Generator<
+      SequenceAndPlayheadPos,
+      SequenceAndPlayheadPos,
+      number
+    > {
       let currentTime = 0;
       let seq: Sequence = [];
-      let until: number = yield seq;
+      let until: number = yield {
+        sequence: seq,
+        playheadPos: currentTime,
+      };
 
       for (const e of exp.expressions) {
         if (e.type !== 'cmd')
@@ -116,7 +129,10 @@ export const createEvaluator: (
               throw Error('Must be a numerical value');
             currentTime += e.arg.value;
             while (currentTime > until) {
-              until = yield seq;
+              until = yield {
+                sequence: seq,
+                playheadPos: currentTime,
+              };
               seq = [];
             }
             break;
@@ -125,19 +141,40 @@ export const createEvaluator: (
         }
       }
 
-      return seq;
+      return {
+        sequence: seq,
+        playheadPos: currentTime,
+      };
     }
 
     let isDone = false;
-    const evaluator = evaluatorGenerator();
+    let evaluator = evaluatorGenerator();
     evaluator.next(0);
+    let currentPlayheadPos = 0;
 
     return {
-      getEventsUntil(playheadPos: number): Sequence {
-        if (isDone) return [];
+      restart() {
+        isDone = false;
+        evaluator = evaluatorGenerator();
+        evaluator.next(0);
+        currentPlayheadPos = 0;
+      },
+
+      getEventsUntil(playheadPos: number): EventSourceSequence {
+        if (isDone)
+          return {
+            events: [],
+            done: true,
+            currentPlayheadPos: currentPlayheadPos,
+          };
         const nextEvents = evaluator.next(playheadPos);
         isDone = nextEvents.done || false;
-        return nextEvents.value;
+        currentPlayheadPos = nextEvents.value.playheadPos;
+        return {
+          events: nextEvents.value.sequence,
+          done: isDone,
+          currentPlayheadPos: currentPlayheadPos,
+        };
       },
     };
   };
