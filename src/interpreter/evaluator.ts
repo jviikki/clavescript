@@ -306,7 +306,7 @@ export const createEvaluator: (
       case 'loop':
         if (exp.arg.type === 'identifier') {
           const seq = evaluateIdentifierAsSequence(exp.arg);
-          // TODO: set name of the loop separately
+          // TODO: ID of the loop is now the variable name. Set this separately.
           sequencer.setLoop(
             exp.arg.name,
             seq instanceof Array ? sequenceToEventSource(seq) : seq
