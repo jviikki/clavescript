@@ -54,6 +54,7 @@ export const createEvaluator: (
           break;
       }
     });
+    sequencer.play();
   };
 
   const evaluateAssignment: (exp: Assignment) => void = exp => {
@@ -300,17 +301,16 @@ export const createEvaluator: (
     });
   };
 
-  let counter = 0;
   const evaluateCmd: (exp: BuiltInCommand) => void = exp => {
     switch (exp.name) {
       case 'loop':
         if (exp.arg.type === 'identifier') {
           const seq = evaluateIdentifierAsSequence(exp.arg);
+          // TODO: set name of the loop separately
           sequencer.setLoop(
-            `${++counter}`,
+            exp.arg.name,
             seq instanceof Array ? sequenceToEventSource(seq) : seq
           );
-          sequencer.play();
         }
         break;
       case 'tempo':
