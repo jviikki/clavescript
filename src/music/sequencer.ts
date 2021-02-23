@@ -115,6 +115,28 @@ const createLoopStorage: () => LoopStorage = () => {
     }
   };
 
+  const getEventsFromLoop: (
+    loop: Loop,
+    playheadPosition: number
+  ) => Sequence = (loop, playheadPosition) => {
+    const loopStart = loop.startPlayheadPosition;
+    const loopPlayheadPosition = playheadPosition - loopStart;
+    const seq = loop.eventSource.getEventsUntil(loopPlayheadPosition);
+    // Did loop reach the end? If it did, get events from the next loop(s).
+    if (seq.done) {
+      if (seq.currentPlayheadPos === 0) return []; // The loop is empty
+
+      loop.startPlayheadPosition += seq.currentPlayheadPos; // new loop starts where the old left off
+      loop.eventSource.restart();
+
+      return [
+        ...seq.events.map(e => adjustEventTime(loopStart, e)),
+        ...getEventsFromLoop(loop, playheadPosition),
+      ];
+    }
+    return seq.events.map(e => adjustEventTime(loopStart, e));
+  };
+
   return {
     setLoop(id: string, loop: MusicalEventSource) {
       loops[id] = {
@@ -133,17 +155,9 @@ const createLoopStorage: () => LoopStorage = () => {
     },
 
     getEventsUntil(playheadPosition: number): Sequence {
-      return Object.values(loops).flatMap(loop => {
-        const loopStart = loop.startPlayheadPosition;
-        const seq = loop.eventSource.getEventsUntil(
-          playheadPosition - loopStart
-        );
-        if (seq.done) {
-          loop.startPlayheadPosition += seq.currentPlayheadPos;
-          loop.eventSource.restart();
-        }
-        return seq.events.map(e => adjustEventTime(loopStart, e));
-      });
+      return Object.values(loops).flatMap(loop =>
+        getEventsFromLoop(loop, playheadPosition)
+      );
     },
   };
 };
