@@ -94,6 +94,7 @@ const createLoopStorage: () => LoopStorage = () => {
   type Loop = {
     startPlayheadPosition: number;
     eventSource: MusicalEventSource;
+    nextEventSource: null | MusicalEvent; // If the event source will be replaced by a new one
   };
 
   type LoopMap = {
@@ -102,11 +103,24 @@ const createLoopStorage: () => LoopStorage = () => {
 
   let loops: LoopMap = {};
 
+  const adjustEventTime: (
+    loopStart: number,
+    e: MusicalEvent
+  ) => MusicalEvent = (loopStart, e) => {
+    switch (e.type) {
+      case 'NOTE':
+        return {...e, startTime: loopStart + e.startTime};
+      default:
+        return {...e, startTime: loopStart + e.time};
+    }
+  };
+
   return {
     setLoop(id: string, loop: MusicalEventSource) {
       loops[id] = {
         startPlayheadPosition: 0,
         eventSource: loop,
+        nextEventSource: null,
       };
     },
 
@@ -128,17 +142,7 @@ const createLoopStorage: () => LoopStorage = () => {
           loop.startPlayheadPosition += seq.currentPlayheadPos;
           loop.eventSource.restart();
         }
-        return seq.events.map(e =>
-          e.type === 'NOTE'
-            ? {
-                ...e,
-                startTime: loopStart + e.startTime,
-              }
-            : {
-                ...e,
-                time: loopStart + e.time,
-              }
-        );
+        return seq.events.map(e => adjustEventTime(loopStart, e));
       });
     },
   };
