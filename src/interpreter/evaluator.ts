@@ -76,7 +76,10 @@ export const createEvaluator: (
     exp: Identifier
   ) => Sequence | MusicalEventSource = exp => {
     const id = evaluateIdentifier(exp);
-    if (typeof id === 'number') throw Error('Identifier must be sequence');
+    if (id === undefined || id === null)
+      throw Error(`Undefined variable: ${exp.name}`);
+    if (typeof id === 'number')
+      throw Error('Identifier refers to a number. It must be sequence.');
     return id;
   };
 
