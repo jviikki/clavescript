@@ -176,7 +176,9 @@ export const createSequencer: (
 
   return {
     play(): void {
+      if (isPlaying) return;
       isPlaying = true;
+
       let previousPlayheadPos = 0; // In beats, i.e. 1.0 = 1 quarter note
       let previousAbsoluteTime: number = audio.getCurrentTime();
       let currentlyPlayingNotes: Array<NoteOffEvent> = [];
