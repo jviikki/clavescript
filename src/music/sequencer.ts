@@ -85,6 +85,7 @@ type NoteOffEvent = NoteRef & {noteOffPlayheadPos: number};
 
 type LoopStorage = {
   setLoop(id: string, loop: MusicalEventSource): void;
+  queueLoop(id: string, loop: MusicalEventSource): void;
   unsetLoop(id: string): void;
   unsetAll(): void;
   getEventsUntil(playheadPosition: number): Sequence;
@@ -94,14 +95,18 @@ const createLoopStorage: () => LoopStorage = () => {
   type Loop = {
     startPlayheadPosition: number;
     eventSource: MusicalEventSource;
-    nextEventSource: null | MusicalEvent; // If the event source will be replaced by a new one
   };
 
   type LoopMap = {
     [id: string]: Loop;
   };
 
+  type QueuedLoopMap = {
+    [id: string]: MusicalEventSource;
+  };
+
   let loops: LoopMap = {};
+  let queuedLoops: QueuedLoopMap = {};
 
   const adjustEventTime: (
     loopStart: number,
@@ -113,6 +118,16 @@ const createLoopStorage: () => LoopStorage = () => {
       default:
         return {...e, startTime: loopStart + e.time};
     }
+  };
+
+  const startQueuedLoops: (playheadPos: number) => void = playheadPos => {
+    for (const [id, eventSource] of Object.entries(queuedLoops)) {
+      loops[id] = {
+        startPlayheadPosition: playheadPos,
+        eventSource: eventSource,
+      };
+    }
+    queuedLoops = {};
   };
 
   const getEventsFromLoop: (
@@ -129,6 +144,9 @@ const createLoopStorage: () => LoopStorage = () => {
       loop.startPlayheadPosition += seq.currentPlayheadPos; // new loop starts where the old left off
       loop.eventSource.restart();
 
+      // TODO: move this to a more proper location.
+      startQueuedLoops(loop.startPlayheadPosition);
+
       return [
         ...seq.events.map(e => adjustEventTime(loopStart, e)),
         ...getEventsFromLoop(loop, playheadPosition),
@@ -142,8 +160,11 @@ const createLoopStorage: () => LoopStorage = () => {
       loops[id] = {
         startPlayheadPosition: 0,
         eventSource: loop,
-        nextEventSource: null,
       };
+    },
+
+    queueLoop(id: string, loop: MusicalEventSource) {
+      queuedLoops[id] = loop;
     },
 
     unsetLoop(id: string) {
@@ -253,7 +274,11 @@ export const createSequencer: (
     },
 
     setLoop(id: string, s: MusicalEventSource) {
-      loopStorage.setLoop(id, s);
+      if (isPlaying) {
+        loopStorage.queueLoop(id, s);
+      } else {
+        loopStorage.setLoop(id, s);
+      }
     },
 
     unsetLoop(id: string) {
