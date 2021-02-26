@@ -8,18 +8,18 @@ const MIDI_OUTPUT_DEVICE_NAME = 'IAC Driver Bus 1';
 // TODO: initialize this in a different scope
 let midiOutput: MIDIOutput;
 
-let clockOffset = 0;
+let getAudioContextTime: () => number = () => 0;
 
 export const isWebMIDISupported = () => !!navigator.requestMIDIAccess;
 
 export const initializeMIDI: (
-  currentTime: number
-) => void = async currentTime => {
+  getAudioContextTime: () => number
+) => void = async getAudioContextTimeFunc => {
+  getAudioContextTime = getAudioContextTimeFunc;
   if (!isWebMIDISupported()) {
     throw new Error('WebMIDI is not supported');
   }
 
-  clockOffset = window.performance.now() - currentTime * 1000;
   const access = await navigator.requestMIDIAccess(); // { sysex: true }
 
   // access.inputs.forEach(i => {
@@ -38,23 +38,30 @@ export const initializeMIDI: (
   });
 };
 
-export const updateAudioContextTime: (
-  currentTime: number
-) => void = currentTime =>
-  (clockOffset = window.performance.now() - currentTime * 1000);
-
 export const playMidiNote: (
   pitch: AbsPitch,
   velocity: number,
   time?: number
 ) => NoteRef = (pitch, velocity, time = undefined) => {
-  const startTime =
-    time === undefined ? window.performance.now() : time * 1000 + clockOffset;
+  const calculateStartTime = () => {
+    const now = window.performance.now();
+    if (time === undefined) {
+      return now;
+    } else {
+      const clockOffset = now - getAudioContextTime() * 1000;
+      return time * 1000 + clockOffset;
+    }
+  };
+
+  const startTime = calculateStartTime();
+
   midiOutput.send([0x90, pitch, velocity], startTime);
 
   return {
     stop: (time?: number) => {
       const stopOffset = 1; // millisecond, make sure that stop event always comes after start
+      const now = window.performance.now();
+      const clockOffset = now - getAudioContextTime() * 1000;
       midiOutput.send(
         [0x80, pitch, velocity],
         time === undefined ? startTime + stopOffset : time * 1000 + clockOffset

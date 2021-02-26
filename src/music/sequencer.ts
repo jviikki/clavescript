@@ -158,7 +158,9 @@ const createLoopStorage: () => LoopStorage = () => {
   return {
     setLoop(id: string, loop: MusicalEventSource) {
       loops[id] = {
-        startPlayheadPosition: 0,
+        // Initially delay the start of the first loop so that the first notes
+        // can be scheduled into the future
+        startPlayheadPosition: 0.25,
         eventSource: loop,
       };
     },
