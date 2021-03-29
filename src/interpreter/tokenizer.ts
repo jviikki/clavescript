@@ -7,6 +7,7 @@ export enum TokenType {
   Operator,
   Keyword,
   Identifier,
+  Float,
 }
 
 const punctuationStrings = ['{', '}', ',', '|', ';', '(', ')'] as const;
@@ -24,6 +25,11 @@ export type EOFToken = {
 
 export type IntegerToken = {
   type: TokenType.Integer;
+  value: number;
+};
+
+export type FloatToken = {
+  type: TokenType.Float;
   value: number;
 };
 
@@ -53,7 +59,8 @@ export type Token =
   | IntegerToken
   | OperatorToken
   | KeywordToken
-  | IdentifierToken;
+  | IdentifierToken
+  | FloatToken;
 
 export type TokenizerError = {
   type: 'error';
@@ -126,8 +133,22 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
 
   const readInteger: () => IntegerToken = () => {
     const number = readWhile(isDigit);
-    // TODO: add NaN check
     return {type: TokenType.Integer, value: parseInt(number, 10)};
+  };
+
+  const readNumber: () => IntegerToken | FloatToken = () => {
+    const integer = readWhile(isDigit);
+    const ch = input.peek();
+    if (ch === '.') {
+      input.next();
+      const fractional = readWhile(isDigit);
+      return {
+        type: TokenType.Float,
+        value: parseFloat(`${integer}.${fractional}`),
+      };
+    } else {
+      return {type: TokenType.Integer, value: parseInt(integer, 10)};
+    }
   };
 
   const readPunctuation: () => PunctuationToken | TokenizerError = () => {
@@ -195,7 +216,7 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
       return readNext();
     }
     if (isDigit(ch)) {
-      return readInteger();
+      return readNumber();
     }
     if (isPunctuation(ch)) {
       return readPunctuation();

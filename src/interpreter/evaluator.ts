@@ -1,6 +1,7 @@
 import {
   Assignment,
   BuiltInCommand,
+  Float,
   Identifier,
   Integer,
   MusicalBinaryOperator,
@@ -67,6 +68,8 @@ export const createEvaluator: (
 
   const evaluateInteger: (exp: Integer) => number = exp => exp.value;
 
+  const evaluateFloat: (exp: Float) => number = exp => exp.value;
+
   const evaluateIdentifierAsInteger: (exp: Identifier) => number = exp => {
     const id = evaluateIdentifier(exp);
     if (typeof id !== 'number') throw Error('Must be a numerical value');
@@ -109,8 +112,7 @@ export const createEvaluator: (
           throw Error('Musical expressions can contain only commands');
         switch (e.name) {
           case 'play':
-            if (e.arg.type !== 'integer')
-              throw Error('Must be a numerical value');
+            if (e.arg.type !== 'integer') throw Error('Must be an integer');
             seq.push({
               type: 'NOTE',
               startTime: currentTime,
@@ -129,8 +131,8 @@ export const createEvaluator: (
             });
             break;
           case 'sleep':
-            if (e.arg.type !== 'integer')
-              throw Error('Must be a numerical value');
+            if (e.arg.type !== 'integer' && e.arg.type !== 'float')
+              throw Error('Must be an integer or a float');
             currentTime += e.arg.value;
             while (currentTime > until) {
               until = yield {
@@ -184,13 +186,15 @@ export const createEvaluator: (
   };
 
   const evaluateAssignmentRightValue: (
-    exp: Integer | MusicalExpression | Identifier | MusicalProcedure
+    exp: Integer | Float | MusicalExpression | Identifier | MusicalProcedure
   ) => number | Sequence | MusicalEventSource = exp => {
     switch (exp.type) {
       case 'identifier':
         return evaluateIdentifier(exp);
       case 'integer':
         return evaluateInteger(exp);
+      case 'float':
+        return evaluateFloat(exp);
       case 'step_sequence':
       case 'musical_binary':
         return evaluateMusicalExpression(exp);
