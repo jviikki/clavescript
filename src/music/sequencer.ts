@@ -1,5 +1,6 @@
 import {AudioManager} from './audio';
 import {NoteRef, ReadOnlyInstrumentLibrary} from './instrument';
+import {Logger} from '../logger';
 
 export type MusicalEvent = Note | PitchBend;
 
@@ -91,7 +92,7 @@ type LoopStorage = {
   getEventsUntil(playheadPosition: number): Sequence;
 };
 
-const createLoopStorage: () => LoopStorage = () => {
+const createLoopStorage: (logger: Logger) => LoopStorage = logger => {
   type Loop = {
     startPlayheadPosition: number;
     eventSource: MusicalEventSource;
@@ -155,6 +156,10 @@ const createLoopStorage: () => LoopStorage = () => {
     return seq.events.map(e => adjustEventTime(loopStart, e));
   };
 
+  const unsetLoop: (id: string) => void = id => {
+    delete loops[id];
+  };
+
   return {
     setLoop(id: string, loop: MusicalEventSource) {
       loops[id] = {
@@ -169,33 +174,40 @@ const createLoopStorage: () => LoopStorage = () => {
       queuedLoops[id] = loop;
     },
 
-    unsetLoop(id: string) {
-      delete loops[id];
-    },
+    unsetLoop: unsetLoop,
 
     unsetAll() {
       loops = {};
     },
 
     getEventsUntil(playheadPosition: number): Sequence {
-      return Object.values(loops).flatMap(loop =>
-        getEventsFromLoop(loop, playheadPosition)
-      );
+      return Object.entries(loops).flatMap(([id, loop]) => {
+        try {
+          return getEventsFromLoop(loop, playheadPosition);
+        } catch (e) {
+          logger.e(
+            `Playback of loop "${id}" was aborted due to an error. ${e.toString()}`
+          );
+          unsetLoop(id);
+          return [];
+        }
+      });
     },
   };
 };
 
 export const createSequencer: (
   audio: AudioManager,
-  instruments: ReadOnlyInstrumentLibrary
-) => Sequencer = (audio, instruments) => {
+  instruments: ReadOnlyInstrumentLibrary,
+  logger: Logger
+) => Sequencer = (audio, instruments, logger) => {
   const SCHEDULER_INTERVAL = 25; // ms
   const LOOKAHEAD_TIME = 100; // ms
 
   let beatsPerMinute = 120; // Beats (quarter notes) per minute
   let isPlaying = false;
 
-  const loopStorage = createLoopStorage();
+  const loopStorage = createLoopStorage(logger);
 
   return {
     play(): void {
