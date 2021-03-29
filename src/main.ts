@@ -30,7 +30,7 @@ const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
   }
 };
 
-const setupSequencer: () => Promise<Sequencer> = async () => {
+const setupSequencer: (logger: Logger) => Promise<Sequencer> = async logger => {
   const audio = createAudioManager();
   await initializeMIDI(() => audio.getCurrentTime());
   const instruments = createInstrumentLibrary();
@@ -40,7 +40,7 @@ const setupSequencer: () => Promise<Sequencer> = async () => {
   instruments.add('midi', {
     playNote: playMidiNote,
   });
-  return createSequencer(audio, instruments);
+  return createSequencer(audio, instruments, logger);
 };
 
 window.addEventListener('load', async () => {
@@ -79,7 +79,7 @@ const setupUI = async () => {
     logMessages.appendChild(elem);
   });
 
-  const sequencer = await setupSequencer();
+  const sequencer = await setupSequencer(logger);
   const evaluator = createEvaluator(sequencer);
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
   codeArea.addEventListener('keydown', e => {
