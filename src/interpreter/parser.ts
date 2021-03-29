@@ -11,6 +11,11 @@ export type Integer = {
   value: number;
 };
 
+export type Float = {
+  type: 'float';
+  value: number;
+};
+
 export type Identifier = {
   type: 'identifier';
   name: string;
@@ -23,7 +28,7 @@ export type StepRest = {
 export type Assignment = {
   type: 'assignment';
   left: Identifier;
-  right: Integer | MusicalExpression | Identifier | MusicalProcedure;
+  right: Integer | Float | MusicalExpression | Identifier | MusicalProcedure;
 };
 
 export type StepSequenceAttribute = Assignment;
@@ -51,7 +56,7 @@ export type MusicalProcedure = {
 export type BuiltInCommand = {
   type: 'cmd';
   name: KeywordString;
-  arg: MusicalExpression | Identifier | Integer;
+  arg: MusicalExpression | Identifier | Integer | Float;
 };
 
 export type Expression = Assignment | BuiltInCommand;
@@ -87,6 +92,18 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
       );
     return {
       type: 'integer',
+      value: next.value,
+    };
+  };
+
+  const parseFloat: () => Float = () => {
+    const next = tokenizer.next();
+    if (next.type !== TokenType.Float)
+      throw new Error(
+        `Parse error: Expected float on line ${tokenizer.line()} (column ${tokenizer.col()})`
+      );
+    return {
+      type: 'float',
       value: next.value,
     };
   };
@@ -229,12 +246,15 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
 
   const parseAssignmentRightValue: () =>
     | Integer
+    | Float
     | MusicalExpression
     | Identifier
     | MusicalProcedure = () => {
     const next = tokenizer.peek();
     if (next.type === TokenType.Integer) {
       return parseInteger();
+    } else if (next.type === TokenType.Float) {
+      return parseFloat();
     } else if (next.type === TokenType.Identifier) {
       return parseIdentifier();
     } else if (next.type === TokenType.Keyword) {
@@ -273,18 +293,22 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   const parseBuiltInCommandArg: () =>
     | MusicalExpression
     | Identifier
-    | Integer = () => {
+    | Integer
+    | Float = () => {
     const token = tokenizer.peek();
     switch (token.type) {
       case TokenType.Identifier:
         return parseIdentifier();
       case TokenType.Integer:
         return parseInteger();
+      case TokenType.Float:
+        return parseFloat();
       default:
-        throw Error('Built-in command are only implemented for identifiers');
+        throw Error('Unable to parse the build in command argument');
     }
   };
 
+  // TODO: make this specific to the built-in command
   const parseBuiltInCommand: () => BuiltInCommand = () => {
     const token = tokenizer.next();
     if (token.type !== TokenType.Keyword)

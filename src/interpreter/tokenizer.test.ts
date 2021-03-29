@@ -57,6 +57,7 @@ describe('Tokenizer', () => {
       '  play 40;' +
       '  sleep 2;\n' +
       '  play 41; \n' +
+      '  sleep 0.25;\n' +
       '};\n' +
       'loop pattern; # start looping the pattern';
 
@@ -528,6 +529,18 @@ describe('Tokenizer', () => {
       {
         type: TokenType.Integer,
         value: 41,
+      },
+      {
+        type: TokenType.Punctuation,
+        value: ';',
+      },
+      {
+        type: TokenType.Keyword,
+        value: 'sleep',
+      },
+      {
+        type: TokenType.Float,
+        value: 0.25,
       },
       {
         type: TokenType.Punctuation,
