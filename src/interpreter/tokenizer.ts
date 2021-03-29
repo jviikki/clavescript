@@ -131,10 +131,10 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
 
   const skipComment: () => void = () => ignoreWhile(isNotLinefeed);
 
-  const readInteger: () => IntegerToken = () => {
-    const number = readWhile(isDigit);
-    return {type: TokenType.Integer, value: parseInt(number, 10)};
-  };
+  // const readInteger: () => IntegerToken = () => {
+  //   const number = readWhile(isDigit);
+  //   return {type: TokenType.Integer, value: parseInt(number, 10)};
+  // };
 
   const readNumber: () => IntegerToken | FloatToken = () => {
     const integer = readWhile(isDigit);
