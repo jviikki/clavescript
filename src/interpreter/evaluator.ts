@@ -20,7 +20,6 @@ import {
 
 export type Evaluator = {
   evaluate(p: Program): void;
-  printGlobalScope(): void;
 };
 
 type VariableValue = number | Sequence | MusicalEventSource;
@@ -33,6 +32,7 @@ type Environment = {
   get(name: string): VariableValue;
   set(name: string, value: VariableValue): void;
   def(name: string, value: VariableValue): void;
+  logVariables(): void;
 };
 
 type Scope = {
@@ -81,68 +81,71 @@ const createEnvironment: (
     def(name: string, value: VariableValue): void {
       scope[name] = value;
     },
+
+    logVariables(): void {
+      console.log(scope);
+    },
   };
 
   return env;
 };
 
-type EvaluationContext = {
+type Context = {
   env: Environment;
 };
 
 export const createEvaluator: (
   sequencer: Sequencer
 ) => Evaluator = sequencer => {
-  // This object will act as the global scope for variables
-  const globalScope: Scope = {};
-
-  const assignVariable: (
-    name: string,
-    value: number | Sequence | MusicalEventSource
-  ) => void = (name, value) => {
-    globalScope[name] = value;
+  const ctx: Context = {
+    env: createEnvironment(),
   };
-
-  const getVariable: (
-    name: string
-  ) => number | Sequence | MusicalEventSource = name => globalScope[name];
 
   const evaluate: (program: Program) => void = program => {
     program.expressions.forEach(exp => {
       switch (exp.type) {
         case 'assignment':
-          evaluateAssignment(exp);
+          evaluateAssignment(ctx, exp);
           break;
         case 'cmd':
-          evaluateCmd(exp);
+          evaluateCmd(ctx, exp);
           break;
       }
     });
     sequencer.play();
   };
 
-  const evaluateAssignment: (exp: Assignment) => void = exp => {
-    assignVariable(exp.left.name, evaluateAssignmentRightValue(exp.right));
+  const evaluateAssignment: (ctx: Context, exp: Assignment) => void = (
+    ctx,
+    exp
+  ) => {
+    ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
   };
 
   const evaluateIdentifier: (
+    ctx: Context,
     exp: Identifier
-  ) => number | Sequence | MusicalEventSource = exp => getVariable(exp.name);
+  ) => number | Sequence | MusicalEventSource = (ctx, exp) =>
+    ctx.env.get(exp.name);
 
   const evaluateInteger: (exp: Integer) => number = exp => exp.value;
 
   const evaluateFloat: (exp: Float) => number = exp => exp.value;
 
-  const evaluateIdentifierAsInteger: (exp: Identifier) => number = exp => {
-    const id = evaluateIdentifier(exp);
+  const evaluateIdentifierAsInteger: (
+    ctx: Context,
+    exp: Identifier
+  ) => number = (ctx, exp) => {
+    const id = evaluateIdentifier(ctx, exp);
     if (typeof id !== 'number') throw Error('Must be a numerical value');
     return id;
   };
 
   const evaluateIdentifierAsSequence: (
+    ctx: Context,
     exp: Identifier
-  ) => Sequence | MusicalEventSource = exp => {
-    const id = evaluateIdentifier(exp);
+  ) => Sequence | MusicalEventSource = (ctx, exp) => {
+    const id = evaluateIdentifier(ctx, exp);
     if (id === undefined || id === null)
       throw Error(`Undefined variable: ${exp.name}`);
     if (typeof id === 'number')
@@ -151,18 +154,17 @@ export const createEvaluator: (
   };
 
   const evaluateMusicalProcedure: (
+    ctx: Context,
     exp: MusicalProcedure
-  ) => MusicalEventSource = exp => {
+  ) => MusicalEventSource = (ctx, exp) => {
     type SequenceAndPlayheadPos = {
       sequence: Sequence;
       playheadPos: number;
     };
 
-    function* evaluatorGenerator(): Generator<
-      SequenceAndPlayheadPos,
-      SequenceAndPlayheadPos,
-      number
-    > {
+    function* evaluatorGenerator(
+      ctx: Context
+    ): Generator<SequenceAndPlayheadPos, SequenceAndPlayheadPos, number> {
       let currentTime = 0;
       let seq: Sequence = [];
       let until: number = yield {
@@ -194,9 +196,17 @@ export const createEvaluator: (
             });
             break;
           case 'sleep':
-            if (e.arg.type !== 'integer' && e.arg.type !== 'float')
-              throw Error('Must be an integer or a float');
-            currentTime += e.arg.value;
+            // TODO: extract this function
+            currentTime += (() => {
+              if (e.arg.type === 'identifier') {
+                return evaluateIdentifierAsInteger(ctx, e.arg);
+              } else if (e.arg.type === 'float' || e.arg.type === 'integer') {
+                return e.arg.value;
+              } else {
+                throw Error('Must be an integer or a float');
+              }
+            })();
+
             while (currentTime > until) {
               until = yield {
                 sequence: seq,
@@ -217,14 +227,14 @@ export const createEvaluator: (
     }
 
     let isDone = false;
-    let evaluator = evaluatorGenerator();
+    let evaluator = evaluatorGenerator({env: ctx.env.extend()});
     evaluator.next(0);
     let currentPlayheadPos = 0;
 
     return {
       restart() {
         isDone = false;
-        evaluator = evaluatorGenerator();
+        evaluator = evaluatorGenerator({env: ctx.env.extend()});
         evaluator.next(0);
         currentPlayheadPos = 0;
       },
@@ -249,11 +259,12 @@ export const createEvaluator: (
   };
 
   const evaluateAssignmentRightValue: (
+    ctx: Context,
     exp: Integer | Float | MusicalExpression | Identifier | MusicalProcedure
-  ) => number | Sequence | MusicalEventSource = exp => {
+  ) => number | Sequence | MusicalEventSource = (ctx, exp) => {
     switch (exp.type) {
       case 'identifier':
-        return evaluateIdentifier(exp);
+        return evaluateIdentifier(ctx, exp);
       case 'integer':
         return evaluateInteger(exp);
       case 'float':
@@ -262,7 +273,7 @@ export const createEvaluator: (
       case 'musical_binary':
         return evaluateMusicalExpression(exp);
       case 'musical_procedure':
-        return evaluateMusicalProcedure(exp);
+        return evaluateMusicalProcedure(ctx, exp);
     }
   };
 
@@ -368,11 +379,14 @@ export const createEvaluator: (
     });
   };
 
-  const evaluateCmd: (exp: BuiltInCommand) => void = exp => {
+  const evaluateCmd: (ctx: Context, exp: BuiltInCommand) => void = (
+    ctx,
+    exp
+  ) => {
     switch (exp.name) {
       case 'loop':
         if (exp.arg.type === 'identifier') {
-          const seq = evaluateIdentifierAsSequence(exp.arg);
+          const seq = evaluateIdentifierAsSequence(ctx, exp.arg);
           // TODO: ID of the loop is now the variable name. Set this separately.
           sequencer.setLoop(
             exp.arg.name,
@@ -382,7 +396,7 @@ export const createEvaluator: (
         break;
       case 'tempo':
         if (exp.arg.type === 'identifier') {
-          sequencer.setTempo(evaluateIdentifierAsInteger(exp.arg));
+          sequencer.setTempo(evaluateIdentifierAsInteger(ctx, exp.arg));
         } else if (exp.arg.type === 'integer') {
           sequencer.setTempo(evaluateInteger(exp.arg));
         } else {
@@ -394,6 +408,5 @@ export const createEvaluator: (
 
   return {
     evaluate: evaluate,
-    printGlobalScope: () => console.log(globalScope),
   };
 };

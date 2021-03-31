@@ -23,7 +23,6 @@ const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
     console.log(program);
     evaluator.evaluate(program);
     log.i('Evaluation successful');
-    evaluator.printGlobalScope();
   } catch (e) {
     console.log(e);
     log.e(e);
