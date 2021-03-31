@@ -23,8 +23,71 @@ export type Evaluator = {
   printGlobalScope(): void;
 };
 
+type VariableValue = number | Sequence | MusicalEventSource;
+
+type Environment = {
+  extend(): Environment;
+  getParent(): Environment | null;
+  lookup(name: string): Environment | null;
+  isInCurrentScope(name: string): boolean;
+  get(name: string): VariableValue;
+  set(name: string, value: VariableValue): void;
+  def(name: string, value: VariableValue): void;
+};
+
 type Scope = {
-  [name: string]: number | Sequence | MusicalEventSource;
+  [name: string]: VariableValue;
+};
+
+const createEnvironment: (
+  parent?: Environment | null,
+  vars?: Scope
+) => Environment = (parent = null, scope = {}) => {
+  const env = {
+    extend(): Environment {
+      return createEnvironment(env, Object.create(scope));
+    },
+
+    getParent(): Environment | null {
+      return parent;
+    },
+
+    lookup(name: string): Environment | null {
+      let currentScope: Environment | null = env;
+      while (currentScope) {
+        if (currentScope.isInCurrentScope(name)) return currentScope;
+        currentScope = currentScope.getParent();
+      }
+      return null;
+    },
+
+    isInCurrentScope(name: string): boolean {
+      return Object.prototype.hasOwnProperty.call(scope, name);
+    },
+
+    get(name: string): VariableValue {
+      return scope[name];
+    },
+
+    set(name: string, value: VariableValue): void {
+      const scope = env.lookup(name);
+      if (scope) {
+        scope.def(name, value);
+      } else {
+        env.def(name, value);
+      }
+    },
+
+    def(name: string, value: VariableValue): void {
+      scope[name] = value;
+    },
+  };
+
+  return env;
+};
+
+type EvaluationContext = {
+  env: Environment;
 };
 
 export const createEvaluator: (
