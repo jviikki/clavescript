@@ -7,7 +7,7 @@ import {
   MusicalBinaryOperator,
   MusicalExpression,
   MusicalProcedure,
-  Program,
+  Block,
   StepSequence,
 } from './parser';
 import {
@@ -19,7 +19,7 @@ import {
 } from '../music/sequencer';
 
 export type Evaluator = {
-  evaluate(p: Program): void;
+  evaluate(p: Block): void;
 };
 
 type VariableValue = number | Sequence | MusicalEventSource;
@@ -101,7 +101,7 @@ export const createEvaluator: (
     env: createEnvironment(),
   };
 
-  const evaluate: (program: Program) => void = program => {
+  const evaluate: (program: Block) => void = program => {
     program.expressions.forEach(exp => {
       switch (exp.type) {
         case 'assignment':
