@@ -69,8 +69,8 @@ export type FunctionCall = {
 
 export type Expression = Assignment | BuiltInCommand | FunctionCall;
 
-export type Program = {
-  type: 'prog';
+export type Block = {
+  type: 'block';
   expressions: Expression[];
 };
 
@@ -91,7 +91,7 @@ const getOperatorBindingPower: (op: string) => BindingPower = op => {
   }
 };
 
-export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
+export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
   const parseInteger: () => Integer = () => {
     const next = tokenizer.next();
     if (next.type !== TokenType.Integer)
@@ -235,20 +235,17 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   const assertSeq: () => void = () => {
     const token = tokenizer.next();
     if (!(token.type === TokenType.Keyword && token.value === 'seq')) {
-      throw new Error();
+      throw new Error(
+        `Parse error: "seq" expected on line ${tokenizer.line()} (column ${tokenizer.col()})`
+      );
     }
   };
 
   const parseMusicalProcedure: () => MusicalProcedure = () => {
     assertSeq();
-    assertPunc('{');
-    const expressions = parseExpressionsUntil(
-      token => token.type === TokenType.Punctuation && token.value === '}'
-    );
-    assertPunc('}');
     return {
       type: 'musical_procedure',
-      expressions: expressions,
+      expressions: parseDelimitedList('{', '}', ';', parseExpression),
     };
   };
 
@@ -349,7 +346,6 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         default:
           throw new Error('Unable to parse expression');
       }
-      assertPunc(';');
       return expression;
     });
   };
@@ -371,7 +367,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     separator: string,
     parser: () => T
   ) => T[] = (start, stop, separator, parser) => {
-    const a = [];
+    const parsedItems = [];
     let first = true;
     assertPunc(start);
     while (!tokenizer.eof()) {
@@ -382,10 +378,10 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         assertPunc(separator);
       }
       if (isPunc(stop)) break;
-      a.push(parser());
+      parsedItems.push(parser());
     }
     assertPunc(stop);
-    return a;
+    return parsedItems;
   };
 
   const parseExpressions: () => Expression[] = () =>
@@ -404,15 +400,16 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
       }
 
       expressions.push(parseExpression());
+      assertPunc(';');
     }
   };
 
-  const parseProgram: () => Program = () => {
+  const parseBlock: () => Block = () => {
     return {
-      type: 'prog',
+      type: 'block',
       expressions: parseExpressions(),
     };
   };
 
-  return parseProgram();
+  return parseBlock();
 };
