@@ -16,7 +16,14 @@ type PunctuationString = typeof punctuationStrings[number];
 const operatorStrings = [':=:', ':+:', ':=', '-'] as const;
 type OperatorString = typeof operatorStrings[number];
 
-const keywordStrings = ['loop', 'tempo', 'seq', 'play', 'sleep'] as const;
+const keywordStrings = [
+  'loop',
+  'tempo',
+  'seq',
+  'fun',
+  'play',
+  'sleep',
+] as const;
 export type KeywordString = typeof keywordStrings[number];
 
 export type EOFToken = {

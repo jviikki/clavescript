@@ -59,7 +59,15 @@ export type BuiltInCommand = {
   arg: MusicalExpression | Identifier | Integer | Float;
 };
 
-export type Expression = Assignment | BuiltInCommand;
+export type FunctionArgs = Expression[];
+
+export type FunctionCall = {
+  type: 'call';
+  func: Expression;
+  args: FunctionArgs;
+};
+
+export type Expression = Assignment | BuiltInCommand | FunctionCall;
 
 export type Program = {
   type: 'prog';
@@ -280,6 +288,11 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
       );
   };
 
+  const isPunc: (punc: string) => boolean = punc => {
+    const token = tokenizer.peek();
+    return token.type === TokenType.Punctuation && token.value === punc;
+  };
+
   const parseAssignment: () => Assignment = () => {
     const identifier = parseIdentifier();
     assertOperator(':=');
@@ -323,20 +336,56 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   };
 
   const parseExpression: () => Expression = () => {
-    const next = tokenizer.peek();
-    let expression = null;
-    switch (next.type) {
-      case TokenType.Identifier:
-        expression = parseAssignment();
-        break;
-      case TokenType.Keyword:
-        expression = parseBuiltInCommand();
-        break;
-      default:
-        throw new Error('Unable to parse expression');
+    return maybeCall(() => {
+      const next = tokenizer.peek();
+      let expression = null;
+      switch (next.type) {
+        case TokenType.Identifier:
+          expression = parseAssignment();
+          break;
+        case TokenType.Keyword:
+          expression = parseBuiltInCommand();
+          break;
+        default:
+          throw new Error('Unable to parse expression');
+      }
+      assertPunc(';');
+      return expression;
+    });
+  };
+
+  const maybeCall: (parseExpr: () => Expression) => Expression = parseExpr => {
+    const expr = parseExpr();
+    return isPunc('(') ? parseCall(expr) : expr;
+  };
+
+  const parseCall: (expr: Expression) => FunctionCall = expr => ({
+    type: 'call',
+    func: expr,
+    args: parseDelimitedList('(', ')', ',', parseExpression),
+  });
+
+  const parseDelimitedList: <T>(
+    start: string,
+    stop: string,
+    separator: string,
+    parser: () => T
+  ) => T[] = (start, stop, separator, parser) => {
+    const a = [];
+    let first = true;
+    assertPunc(start);
+    while (!tokenizer.eof()) {
+      if (isPunc(stop)) break;
+      if (first) {
+        first = false;
+      } else {
+        assertPunc(separator);
+      }
+      if (isPunc(stop)) break;
+      a.push(parser());
     }
-    assertPunc(';');
-    return expression;
+    assertPunc(stop);
+    return a;
   };
 
   const parseExpressions: () => Expression[] = () =>
@@ -366,13 +415,4 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   };
 
   return parseProgram();
-
-  // while (true) {
-  //     let token = tokenizer.next();
-  //     if (token.type === "error") {
-  //         return { msg: token.msg };
-  //     }
-  //     if (token.type === TokenType.EOF) break;
-  //     ast.push(token);
-  // }
 };
