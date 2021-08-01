@@ -332,28 +332,10 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     };
   };
 
-  const parseExpression: () => Expression = () => {
-    return maybeCall(() => {
-      const next = tokenizer.peek();
-      let expression = null;
-      switch (next.type) {
-        case TokenType.Identifier:
-          expression = parseAssignment();
-          break;
-        case TokenType.Keyword:
-          expression = parseBuiltInCommand();
-          break;
-        default:
-          throw new Error('Unable to parse expression');
-      }
-      return expression;
-    });
-  };
-
-  const maybeCall: (parseExpr: () => Expression) => Expression = parseExpr => {
-    const expr = parseExpr();
-    return isPunc('(') ? parseCall(expr) : expr;
-  };
+  // const maybeCall: (parseExpr: () => Expression) => Expression = parseExpr => {
+  //   const expr = parseExpr();
+  //   return isPunc('(') ? parseCall(expr) : expr;
+  // };
 
   const parseCall: (expr: Expression) => FunctionCall = expr => ({
     type: 'call',
@@ -383,6 +365,70 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     assertPunc(stop);
     return parsedItems;
   };
+
+  // const parseExpression: () => Expression = () => {
+  //   return maybeCall(() => {
+  //     const next = tokenizer.peek();
+  //     let expression = null;
+  //     switch (next.type) {
+  //       case TokenType.Identifier:
+  //         expression = parseAssignment();
+  //         break;
+  //       case TokenType.Keyword:
+  //         expression = parseBuiltInCommand();
+  //         break;
+  //       default:
+  //         throw new Error('Unable to parse expression');
+  //     }
+  //     return expression;
+  //   });
+  // };
+
+  const parseExpressionWithBP: (minBP: number) => Expression = minBP => {
+    let lhs: MusicalExpression | null = null;
+    const token = tokenizer.peek();
+    switch (token.type) {
+      case TokenType.Punctuation:
+        if (token.value === '(') {
+          assertPunc('(');
+          lhs = parseMusicalExpressionWithBP(0);
+          assertPunc(')');
+          break;
+        } else if (token.value === '{') {
+          lhs = parseStepSequence();
+          break;
+        }
+        throw new Error(
+          `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
+        );
+      default:
+        throw new Error(
+          `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
+        );
+    }
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const token = tokenizer.peek();
+      if (token.type !== TokenType.Operator) break;
+      if (token.value !== ':+:' && token.value !== ':=:') break;
+      const [leftBP, rightBP] = getOperatorBindingPower(token.value);
+      if (leftBP < minBP) break;
+      tokenizer.next();
+      const rhs = parseMusicalExpressionWithBP(rightBP);
+      lhs = {
+        type: 'musical_binary',
+        operator: token.value,
+        left: lhs,
+        right: rhs,
+      };
+    }
+
+    return lhs;
+  };
+
+  const parseExpression: () => Expression = () =>
+    parseExpressionWithBP(0);
 
   const parseExpressions: () => Expression[] = () =>
     parseExpressionsUntil(() => false); // Parse until EOF
