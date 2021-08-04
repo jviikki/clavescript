@@ -390,40 +390,24 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
   };
 
-  // const parseIdentifierStatement: () => Statement = () => {
-  //   const identifier = tokenizer.next();
-  //   if (identifier.type !== TokenType.Identifier)
-  //     throw new Error('Error parsing');
-  //
-  //   const next = tokenizer.peek();
-  //   if (next.type === TokenType.Operator && next.value === ':=') {
-  //     return parseAssignment();
-  //   }
-  //
-  //   return parseExpression();
-  // };
-
-  const parseIdentifierStatement: () => Statement = () => {
-    const identifier = parseExpression();
-    if (identifier.type !== 'identifier')
-      throw new Error('Should be identifier');
-    const next = tokenizer.peek();
-    if (next.type === TokenType.Operator && next.value === ':=') {
-      return parseAssignmentToIdentifier(identifier);
-    } else {
-      return identifier;
-    }
-  };
-
   const parseStatement: () => Statement = () => {
     const next = tokenizer.peek();
     switch (next.type) {
       case TokenType.Keyword:
         return parseBuiltInCommand();
-      case TokenType.Identifier:
-        return parseIdentifierStatement();
       default:
-        return parseExpression();
+        // eslint-disable-next-line no-case-declarations
+        const exp = parseExpression();
+        if (exp.type === 'identifier') {
+          const nextFromId = tokenizer.peek();
+          if (
+            nextFromId.type === TokenType.Operator &&
+            nextFromId.value === ':='
+          ) {
+            return parseAssignmentToIdentifier(exp);
+          }
+        }
+        return exp;
     }
   };
 
