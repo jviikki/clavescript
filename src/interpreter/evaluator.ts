@@ -9,6 +9,7 @@ import {
   MusicalProcedure,
   Block,
   StepSequence,
+  Expression,
 } from './parser';
 import {
   EventSourceSequence,
@@ -102,13 +103,13 @@ export const createEvaluator: (
   };
 
   const evaluate: (program: Block) => void = program => {
-    program.expressions.forEach(exp => {
-      switch (exp.type) {
+    program.statements.forEach(stmt => {
+      switch (stmt.type) {
         case 'assignment':
-          evaluateAssignment(ctx, exp);
+          evaluateAssignment(ctx, stmt);
           break;
         case 'cmd':
-          evaluateCmd(ctx, exp);
+          evaluateCmd(ctx, stmt);
           break;
       }
     });
@@ -172,18 +173,18 @@ export const createEvaluator: (
         playheadPos: currentTime,
       };
 
-      for (const e of exp.expressions) {
-        if (e.type !== 'cmd')
+      for (const stmt of exp.statements) {
+        if (stmt.type !== 'cmd')
           throw Error('Musical expressions can contain only commands');
-        switch (e.name) {
+        switch (stmt.name) {
           case 'play':
-            if (e.arg.type !== 'integer') throw Error('Must be an integer');
+            if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
             seq.push({
               type: 'NOTE',
               startTime: currentTime,
               duration: 0.25,
               volume: 64,
-              pitch: e.arg.value,
+              pitch: stmt.arg.value,
               instrument: 'audio',
             });
             seq.push({
@@ -191,17 +192,20 @@ export const createEvaluator: (
               startTime: currentTime,
               duration: 0.25,
               volume: 64,
-              pitch: e.arg.value,
+              pitch: stmt.arg.value,
               instrument: 'midi',
             });
             break;
           case 'sleep':
             // TODO: extract this function
             currentTime += (() => {
-              if (e.arg.type === 'identifier') {
-                return evaluateIdentifierAsInteger(ctx, e.arg);
-              } else if (e.arg.type === 'float' || e.arg.type === 'integer') {
-                return e.arg.value;
+              if (stmt.arg.type === 'identifier') {
+                return evaluateIdentifierAsInteger(ctx, stmt.arg);
+              } else if (
+                stmt.arg.type === 'float' ||
+                stmt.arg.type === 'integer'
+              ) {
+                return stmt.arg.value;
               } else {
                 throw Error('Must be an integer or a float');
               }
@@ -260,7 +264,7 @@ export const createEvaluator: (
 
   const evaluateAssignmentRightValue: (
     ctx: Context,
-    exp: Integer | Float | MusicalExpression | Identifier | MusicalProcedure
+    exp: Expression
   ) => number | Sequence | MusicalEventSource = (ctx, exp) => {
     switch (exp.type) {
       case 'identifier':
@@ -274,6 +278,8 @@ export const createEvaluator: (
         return evaluateMusicalExpression(exp);
       case 'musical_procedure':
         return evaluateMusicalProcedure(ctx, exp);
+      case 'call':
+        throw new Error('Function call is not implemented yet');
     }
   };
 
