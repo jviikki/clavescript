@@ -33,7 +33,7 @@ describe('parser', () => {
 
     const expectedOutput: Block = {
       type: 'block',
-      expressions: [
+      statements: [
         {
           type: 'cmd',
           name: 'tempo',
@@ -384,7 +384,7 @@ describe('parser', () => {
           },
           right: {
             type: 'musical_procedure',
-            expressions: [
+            statements: [
               {
                 type: 'cmd',
                 name: 'play',
