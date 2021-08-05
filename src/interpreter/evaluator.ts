@@ -111,6 +111,8 @@ export const createEvaluator: (
         case 'cmd':
           evaluateCmd(ctx, stmt);
           break;
+        case 'call':
+          throw new Error('Evaluation of function call is not implemented yet');
       }
     });
     sequencer.play();
@@ -278,8 +280,12 @@ export const createEvaluator: (
         return evaluateMusicalExpression(exp);
       case 'musical_procedure':
         return evaluateMusicalProcedure(ctx, exp);
+      case 'fun':
+        throw new Error(
+          'Evaluation of function definition is not implemented yet'
+        );
       case 'call':
-        throw new Error('Function call is not implemented yet');
+        throw new Error('Evaluation of function call is not implemented yet');
     }
   };
 
