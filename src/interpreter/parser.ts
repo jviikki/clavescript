@@ -53,6 +53,12 @@ export type BuiltInCommand = {
   arg: MusicalExpression | Identifier | Integer | Float;
 };
 
+export type FunctionDefinition = {
+  type: 'fun';
+  params: string[];
+  body: Statement[];
+};
+
 export type FunctionArgs = Expression[];
 
 export type FunctionCall = {
@@ -62,6 +68,7 @@ export type FunctionCall = {
 };
 
 export type Expression =
+  | FunctionDefinition
   | FunctionCall
   | MusicalExpression
   | MusicalProcedure
@@ -375,6 +382,31 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     return parsedItems;
   };
 
+  const assertFun: () => void = () => {
+    const token = tokenizer.next();
+    if (!(token.type === TokenType.Keyword && token.value === 'fun')) {
+      throw new Error(
+        `Parse error: "fun" expected on line ${tokenizer.line()} (column ${tokenizer.col()})`
+      );
+    }
+  };
+
+  const parseFunctionDefinition: () => FunctionDefinition = () => {
+    assertFun();
+    const params = parseDelimitedList(
+      '(',
+      ')',
+      ',',
+      () => parseIdentifier().name
+    );
+    const body = parseDelimitedList('{', '}', ';', parseStatement);
+    return {
+      type: 'fun',
+      params: params,
+      body: body,
+    };
+  };
+
   const parseExpression: () => Expression = () => {
     const next = tokenizer.peek();
     if (next.type === TokenType.Integer) {
@@ -383,8 +415,10 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
       return parseFloat();
     } else if (next.type === TokenType.Identifier) {
       return maybeCall(parseIdentifier);
-    } else if (next.type === TokenType.Keyword) {
+    } else if (next.type === TokenType.Keyword && next.value === 'seq') {
       return parseMusicalProcedure();
+    } else if (next.type === TokenType.Keyword && next.value === 'fun') {
+      return parseFunctionDefinition();
     } else {
       return parseMusicalExpression();
     }
@@ -394,7 +428,9 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     const next = tokenizer.peek();
     switch (next.type) {
       case TokenType.Keyword:
-        return parseBuiltInCommand();
+        // TODO: Maybe separate built-in commands and other keywords in lexer.
+        if (next.value === 'fun') return parseExpression();
+        else return parseBuiltInCommand();
       default:
         // eslint-disable-next-line no-case-declarations
         const exp = parseExpression();
