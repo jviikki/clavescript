@@ -93,6 +93,9 @@ const createEnvironment: (
 
 type Context = {
   env: Environment;
+  seq: Sequence;
+  playheadPosition: number;
+  playUntil: number;
 };
 
 export const createEvaluator: (
@@ -100,6 +103,9 @@ export const createEvaluator: (
 ) => Evaluator = sequencer => {
   const ctx: Context = {
     env: createEnvironment(),
+    seq: [],
+    playheadPosition: 0,
+    playUntil: 0,
   };
 
   const evaluate: (program: Block) => void = program => {
@@ -156,23 +162,68 @@ export const createEvaluator: (
     return id;
   };
 
+  type SequenceAndPlayheadPos = {
+    sequence: Sequence;
+    playheadPos: number;
+  };
+
+  // eslint-disable-next-line require-yield
+  function* evaluatePlay(
+    ctx: Context,
+    stmt: BuiltInCommand
+  ): Generator<SequenceAndPlayheadPos, void, number> {
+    if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
+    ctx.seq.push({
+      type: 'NOTE',
+      startTime: ctx.playheadPosition,
+      duration: 0.25,
+      volume: 64,
+      pitch: stmt.arg.value,
+      instrument: 'audio',
+    });
+    ctx.seq.push({
+      type: 'NOTE',
+      startTime: ctx.playheadPosition,
+      duration: 0.25,
+      volume: 64,
+      pitch: stmt.arg.value,
+      instrument: 'midi',
+    });
+  }
+
+  function* evaluateSleep(
+    ctx: Context,
+    stmt: BuiltInCommand
+  ): Generator<SequenceAndPlayheadPos, void, number> {
+    ctx.playheadPosition += (() => {
+      if (stmt.arg.type === 'identifier') {
+        return evaluateIdentifierAsInteger(ctx, stmt.arg);
+      } else if (stmt.arg.type === 'float' || stmt.arg.type === 'integer') {
+        return stmt.arg.value;
+      } else {
+        throw Error('Must be an integer or a float');
+      }
+    })();
+
+    while (ctx.playheadPosition > ctx.playUntil) {
+      ctx.playUntil = yield {
+        sequence: ctx.seq,
+        playheadPos: ctx.playheadPosition,
+      };
+      ctx.seq = [];
+    }
+  }
+
   const evaluateMusicalProcedure: (
     ctx: Context,
     exp: MusicalProcedure
   ) => MusicalEventSource = (ctx, exp) => {
-    type SequenceAndPlayheadPos = {
-      sequence: Sequence;
-      playheadPos: number;
-    };
-
     function* evaluatorGenerator(
       ctx: Context
     ): Generator<SequenceAndPlayheadPos, SequenceAndPlayheadPos, number> {
-      let currentTime = 0;
-      let seq: Sequence = [];
-      let until: number = yield {
-        sequence: seq,
-        playheadPos: currentTime,
+      ctx.playUntil = yield {
+        sequence: ctx.seq,
+        playheadPos: ctx.playheadPosition,
       };
 
       for (const stmt of exp.statements) {
@@ -180,46 +231,10 @@ export const createEvaluator: (
           throw Error('Musical expressions can contain only commands');
         switch (stmt.name) {
           case 'play':
-            if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
-            seq.push({
-              type: 'NOTE',
-              startTime: currentTime,
-              duration: 0.25,
-              volume: 64,
-              pitch: stmt.arg.value,
-              instrument: 'audio',
-            });
-            seq.push({
-              type: 'NOTE',
-              startTime: currentTime,
-              duration: 0.25,
-              volume: 64,
-              pitch: stmt.arg.value,
-              instrument: 'midi',
-            });
+            yield* evaluatePlay(ctx, stmt);
             break;
           case 'sleep':
-            // TODO: extract this function
-            currentTime += (() => {
-              if (stmt.arg.type === 'identifier') {
-                return evaluateIdentifierAsInteger(ctx, stmt.arg);
-              } else if (
-                stmt.arg.type === 'float' ||
-                stmt.arg.type === 'integer'
-              ) {
-                return stmt.arg.value;
-              } else {
-                throw Error('Must be an integer or a float');
-              }
-            })();
-
-            while (currentTime > until) {
-              until = yield {
-                sequence: seq,
-                playheadPos: currentTime,
-              };
-              seq = [];
-            }
+            yield* evaluateSleep(ctx, stmt);
             break;
           default:
             break;
@@ -227,20 +242,30 @@ export const createEvaluator: (
       }
 
       return {
-        sequence: seq,
-        playheadPos: currentTime,
+        sequence: ctx.seq,
+        playheadPos: ctx.playheadPosition,
       };
     }
 
     let isDone = false;
-    let evaluator = evaluatorGenerator({env: ctx.env.extend()});
+    let evaluator = evaluatorGenerator({
+      env: ctx.env.extend(),
+      seq: [],
+      playheadPosition: 0,
+      playUntil: 0,
+    });
     evaluator.next(0);
     let currentPlayheadPos = 0;
 
     return {
       restart() {
         isDone = false;
-        evaluator = evaluatorGenerator({env: ctx.env.extend()});
+        evaluator = evaluatorGenerator({
+          env: ctx.env.extend(),
+          seq: [],
+          playheadPosition: 0,
+          playUntil: 0,
+        });
         evaluator.next(0);
         currentPlayheadPos = 0;
       },
