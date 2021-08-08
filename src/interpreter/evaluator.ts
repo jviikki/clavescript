@@ -10,6 +10,9 @@ import {
   Block,
   StepSequence,
   Expression,
+  FunctionCall,
+  FunctionDefinition,
+  Statement,
 } from './parser';
 import {
   EventSourceSequence,
@@ -23,7 +26,19 @@ export type Evaluator = {
   evaluate(p: Block): void;
 };
 
-type VariableValue = number | Sequence | MusicalEventSource;
+type VariableNumber = {type: 'number'; value: number};
+type VariableSequence = {type: 'sequence'; value: Sequence};
+type VariableMusicalEventSource = {
+  type: 'musical_event_source';
+  value: MusicalEventSource;
+};
+type VariableFunctionDefinition = {type: 'fun'; value: FunctionDefinition};
+
+type VariableValue =
+  | VariableNumber
+  | VariableSequence
+  | VariableMusicalEventSource
+  | VariableFunctionDefinition;
 
 type Environment = {
   extend(): Environment;
@@ -131,23 +146,28 @@ export const createEvaluator: (
     ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
   };
 
-  const evaluateIdentifier: (
-    ctx: Context,
-    exp: Identifier
-  ) => number | Sequence | MusicalEventSource = (ctx, exp) =>
-    ctx.env.get(exp.name);
+  const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
+    ctx,
+    exp
+  ) => ctx.env.get(exp.name);
 
-  const evaluateInteger: (exp: Integer) => number = exp => exp.value;
+  const evaluateInteger: (exp: Integer) => VariableNumber = exp => ({
+    type: 'number',
+    value: exp.value,
+  });
 
-  const evaluateFloat: (exp: Float) => number = exp => exp.value;
+  const evaluateFloat: (exp: Float) => VariableNumber = exp => ({
+    type: 'number',
+    value: exp.value,
+  });
 
   const evaluateIdentifierAsInteger: (
     ctx: Context,
     exp: Identifier
   ) => number = (ctx, exp) => {
     const id = evaluateIdentifier(ctx, exp);
-    if (typeof id !== 'number') throw Error('Must be a numerical value');
-    return id;
+    if (id.type !== 'number') throw Error('Must be a numerical value');
+    return id.value;
   };
 
   const evaluateIdentifierAsSequence: (
@@ -157,9 +177,9 @@ export const createEvaluator: (
     const id = evaluateIdentifier(ctx, exp);
     if (id === undefined || id === null)
       throw Error(`Undefined variable: ${exp.name}`);
-    if (typeof id === 'number')
-      throw Error('Identifier refers to a number. It must be sequence.');
-    return id;
+    if (id.type === 'sequence' || id.type === 'musical_event_source')
+      return id.value;
+    else throw Error('Identifier must be a sequence');
   };
 
   type SequenceAndPlayheadPos = {
@@ -172,13 +192,24 @@ export const createEvaluator: (
     ctx: Context,
     stmt: BuiltInCommand
   ): Generator<SequenceAndPlayheadPos, void, number> {
-    if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
+    // if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
+
+    const pitch = (() => {
+      if (stmt.arg.type === 'identifier') {
+        return evaluateIdentifierAsInteger(ctx, stmt.arg);
+      } else if (stmt.arg.type === 'integer') {
+        return stmt.arg.value;
+      } else {
+        throw Error('Must be an integer');
+      }
+    })();
+
     ctx.seq.push({
       type: 'NOTE',
       startTime: ctx.playheadPosition,
       duration: 0.25,
       volume: 64,
-      pitch: stmt.arg.value,
+      pitch: pitch,
       instrument: 'audio',
     });
     ctx.seq.push({
@@ -186,7 +217,7 @@ export const createEvaluator: (
       startTime: ctx.playheadPosition,
       duration: 0.25,
       volume: 64,
-      pitch: stmt.arg.value,
+      pitch: pitch,
       instrument: 'midi',
     });
   }
@@ -214,6 +245,132 @@ export const createEvaluator: (
     }
   }
 
+  // eslint-disable-next-line require-yield
+  function* evaluateFunctionCall(
+    ctx: Context,
+    stmt: FunctionCall
+  ): Generator<SequenceAndPlayheadPos, void, number> {
+    console.log('evaluating function call');
+    // TODO: accept all expressions
+    if (stmt.func.type !== 'identifier') {
+      throw Error('Function calls are implemented only for identifiers');
+    }
+    const func = ctx.env.get(stmt.func.name);
+    if (func.type !== 'fun') {
+      throw Error('Attempting to call a non-function');
+    }
+
+    if (func.value.params.length !== stmt.args.length) {
+      throw Error(
+        `Arguments provided: ${stmt.args.length}, expected: ${func.value.params.length}`
+      );
+    }
+
+    const oldEnv = ctx.env;
+    ctx.env = ctx.env.extend();
+    // const newCtx: Context = {
+    //   ...ctx,
+    //   env: ctx.env.extend(),
+    // };
+
+    // TODO: accept all expressions. Now accepting only number literals.
+    for (let i = 0; i < stmt.args.length; i++) {
+      const arg = stmt.args[i];
+      switch (arg.type) {
+        case 'integer':
+          ctx.env.set(func.value.params[i], evaluateInteger(arg));
+          break;
+        case 'float':
+          ctx.env.set(func.value.params[i], evaluateFloat(arg));
+      }
+    }
+
+    // yield* evaluateFunctionBody(newCtx, func.value.body);
+    yield* evaluateFunctionBody(ctx, func.value.body);
+    ctx.env = oldEnv;
+  }
+
+  // eslint-disable-next-line require-yield
+  function* evaluateFunctionDefinition(
+    ctx: Context,
+    stmt: FunctionDefinition
+  ): Generator<SequenceAndPlayheadPos, FunctionDefinition, number> {
+    console.log('evaluating function definition');
+    return stmt;
+  }
+
+  // eslint-disable-next-line require-yield
+  function* evaluateAssignmentGen(
+    ctx: Context,
+    exp: Assignment
+  ): Generator<SequenceAndPlayheadPos, void, number> {
+    ctx.env.set(
+      exp.left.name,
+      yield* evaluateAssignmentRightValueGen(ctx, exp.right)
+    );
+  }
+
+  // eslint-disable-next-line require-yield
+  function* evaluateAssignmentRightValueGen(
+    ctx: Context,
+    exp: Expression
+  ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
+    switch (exp.type) {
+      case 'identifier':
+        return evaluateIdentifier(ctx, exp);
+      case 'integer':
+        return evaluateInteger(exp);
+      case 'float':
+        return evaluateFloat(exp);
+      case 'step_sequence':
+      case 'musical_binary':
+        return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+      case 'musical_procedure':
+        return {
+          type: 'musical_event_source',
+          value: evaluateMusicalProcedure(ctx, exp),
+        };
+      case 'fun':
+        return {
+          type: 'fun',
+          value: yield* evaluateFunctionDefinition(ctx, exp),
+        };
+      case 'call':
+        throw Error('Evaluation of function call not yet implemented');
+    }
+  }
+
+  function* evaluateStatement(
+    ctx: Context,
+    stmt: Statement
+  ): Generator<SequenceAndPlayheadPos, void, number> {
+    if (stmt.type === 'cmd') {
+      switch (stmt.name) {
+        case 'play':
+          yield* evaluatePlay(ctx, stmt);
+          break;
+        case 'sleep':
+          yield* evaluateSleep(ctx, stmt);
+          break;
+        default:
+          break;
+      }
+    } else if (stmt.type === 'call') {
+      yield* evaluateFunctionCall(ctx, stmt);
+    } else if (stmt.type === 'assignment') {
+      yield* evaluateAssignmentGen(ctx, stmt);
+    }
+  }
+
+  function* evaluateFunctionBody(
+    ctx: Context,
+    statements: Statement[]
+  ): Generator<SequenceAndPlayheadPos, void, number> {
+    for (const stmt of statements) {
+      yield* evaluateStatement(ctx, stmt);
+    }
+  }
+
   const evaluateMusicalProcedure: (
     ctx: Context,
     exp: MusicalProcedure
@@ -226,20 +383,7 @@ export const createEvaluator: (
         playheadPos: ctx.playheadPosition,
       };
 
-      for (const stmt of exp.statements) {
-        if (stmt.type !== 'cmd')
-          throw Error('Musical expressions can contain only commands');
-        switch (stmt.name) {
-          case 'play':
-            yield* evaluatePlay(ctx, stmt);
-            break;
-          case 'sleep':
-            yield* evaluateSleep(ctx, stmt);
-            break;
-          default:
-            break;
-        }
-      }
+      yield* evaluateFunctionBody(ctx, exp.statements);
 
       return {
         sequence: ctx.seq,
@@ -292,7 +436,7 @@ export const createEvaluator: (
   const evaluateAssignmentRightValue: (
     ctx: Context,
     exp: Expression
-  ) => number | Sequence | MusicalEventSource = (ctx, exp) => {
+  ) => VariableValue = (ctx, exp) => {
     switch (exp.type) {
       case 'identifier':
         return evaluateIdentifier(ctx, exp);
@@ -302,9 +446,12 @@ export const createEvaluator: (
         return evaluateFloat(exp);
       case 'step_sequence':
       case 'musical_binary':
-        return evaluateMusicalExpression(exp);
+        return {type: 'sequence', value: evaluateMusicalExpression(exp)};
       case 'musical_procedure':
-        return evaluateMusicalProcedure(ctx, exp);
+        return {
+          type: 'musical_event_source',
+          value: evaluateMusicalProcedure(ctx, exp),
+        };
       case 'fun':
         throw new Error(
           'Evaluation of function definition is not implemented yet'
@@ -435,7 +582,7 @@ export const createEvaluator: (
         if (exp.arg.type === 'identifier') {
           sequencer.setTempo(evaluateIdentifierAsInteger(ctx, exp.arg));
         } else if (exp.arg.type === 'integer') {
-          sequencer.setTempo(evaluateInteger(exp.arg));
+          sequencer.setTempo(evaluateInteger(exp.arg).value);
         } else {
           throw Error('Tempo must be an integer');
         }

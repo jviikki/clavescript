@@ -1,4 +1,4 @@
-import {KeywordString, Tokenizer, TokenType} from './tokenizer';
+import {CommandString, Tokenizer, TokenType} from './tokenizer';
 
 export type Integer = {
   type: 'integer';
@@ -49,7 +49,7 @@ export type MusicalProcedure = {
 
 export type BuiltInCommand = {
   type: 'cmd';
-  name: KeywordString;
+  name: CommandString;
   arg: MusicalExpression | Identifier | Integer | Float;
 };
 
@@ -337,10 +337,19 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
   // TODO: make this specific to the built-in command
   const parseBuiltInCommand: () => BuiltInCommand = () => {
     const token = tokenizer.next();
-    if (token.type !== TokenType.Keyword)
+    if (
+      !(
+        token.type === TokenType.Keyword &&
+        (token.value === 'loop' ||
+          token.value === 'tempo' ||
+          token.value === 'play' ||
+          token.value === 'sleep')
+      )
+    ) {
       throw new Error(
-        `Parse error: Expected a keyword on line ${tokenizer.line()} (column ${tokenizer.col()})`
+        `Parse error: Expected a command on line ${tokenizer.line()} (column ${tokenizer.col()})`
       );
+    }
     return {
       type: 'cmd',
       name: token.value,
