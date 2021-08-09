@@ -113,6 +113,20 @@ type Context = {
   playUntil: number;
 };
 
+type SequenceAndPlayheadPos = {
+  sequence: Sequence;
+  playheadPos: number;
+};
+
+function runGenerator<T>(gen: Generator<SequenceAndPlayheadPos, T, number>): T {
+  for (;;) {
+    const val = gen.next(Number.MAX_VALUE);
+    if (val.done) {
+      return val.value;
+    }
+  }
+}
+
 export const createEvaluator: (
   sequencer: Sequencer
 ) => Evaluator = sequencer => {
@@ -121,22 +135,6 @@ export const createEvaluator: (
     seq: [],
     playheadPosition: 0,
     playUntil: 0,
-  };
-
-  const evaluate: (program: Block) => void = program => {
-    program.statements.forEach(stmt => {
-      switch (stmt.type) {
-        case 'assignment':
-          evaluateAssignment(ctx, stmt);
-          break;
-        case 'cmd':
-          evaluateCmd(ctx, stmt);
-          break;
-        case 'call':
-          throw new Error('Evaluation of function call is not implemented yet');
-      }
-    });
-    sequencer.play();
   };
 
   const evaluateAssignment: (ctx: Context, exp: Assignment) => void = (
@@ -180,11 +178,6 @@ export const createEvaluator: (
     if (id.type === 'sequence' || id.type === 'musical_event_source')
       return id.value;
     else throw Error('Identifier must be a sequence');
-  };
-
-  type SequenceAndPlayheadPos = {
-    sequence: Sequence;
-    playheadPos: number;
   };
 
   // eslint-disable-next-line require-yield
@@ -453,9 +446,10 @@ export const createEvaluator: (
           value: evaluateMusicalProcedure(ctx, exp),
         };
       case 'fun':
-        throw new Error(
-          'Evaluation of function definition is not implemented yet'
-        );
+        return {
+          type: 'fun',
+          value: runGenerator(evaluateFunctionDefinition(ctx, exp)),
+        };
       case 'call':
         throw new Error('Evaluation of function call is not implemented yet');
     }
@@ -588,6 +582,22 @@ export const createEvaluator: (
         }
         break;
     }
+  };
+
+  const evaluate: (program: Block) => void = program => {
+    program.statements.forEach(stmt => {
+      switch (stmt.type) {
+        case 'assignment':
+          evaluateAssignment(ctx, stmt);
+          break;
+        case 'cmd':
+          evaluateCmd(ctx, stmt);
+          break;
+        case 'call':
+          throw new Error('Evaluation of function call is not implemented yet');
+      }
+    });
+    sequencer.play();
   };
 
   return {
