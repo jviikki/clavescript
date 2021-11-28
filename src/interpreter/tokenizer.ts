@@ -13,7 +13,24 @@ export enum TokenType {
 const punctuationStrings = ['{', '}', ',', '|', ';', '(', ')'] as const;
 type PunctuationString = typeof punctuationStrings[number];
 
-const operatorStrings = [':=:', ':+:', ':=', '-'] as const;
+const operatorStrings = [
+  ':=:',
+  ':+:',
+  '/',
+  '*',
+  '+',
+  '-',
+  '>',
+  '>=',
+  '<',
+  '<=',
+  '!=',
+  '==',
+  '&&',
+  '||',
+  ':=',
+  '!',
+] as const;
 type OperatorString = typeof operatorStrings[number];
 
 const commandStrings = ['loop', 'tempo', 'play', 'sleep'] as const;
