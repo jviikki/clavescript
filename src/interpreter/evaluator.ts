@@ -309,6 +309,12 @@ export const createEvaluator: (
     exp: Expression
   ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
     switch (exp.type) {
+      case 'binary_operator':
+        // TODO: Implement binary operator
+        throw Error('Binary operator not yet implemented');
+      case 'unary_operator':
+        // TODO: Implement unary operator
+        throw Error('Unary operator not yet implemented');
       case 'identifier':
         return evaluateIdentifier(ctx, exp);
       case 'integer':
@@ -431,6 +437,12 @@ export const createEvaluator: (
     exp: Expression
   ) => VariableValue = (ctx, exp) => {
     switch (exp.type) {
+      case 'unary_operator':
+        // TODO: Implement unary operator
+        throw Error('Unary operator not yet implemented');
+      case 'binary_operator':
+        // TODO: implement binary operator
+        throw Error('Binary operator not yet implemented');
       case 'identifier':
         return evaluateIdentifier(ctx, exp);
       case 'integer':
