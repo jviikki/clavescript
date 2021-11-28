@@ -321,6 +321,9 @@ export const createEvaluator: (
         return evaluateInteger(exp);
       case 'float':
         return evaluateFloat(exp);
+      case 'boolean':
+        // TODO: Implement boolean literal
+        throw Error('Boolean literal not yet implemented');
       case 'step_sequence':
       case 'musical_binary':
         return {type: 'sequence', value: evaluateMusicalExpression(exp)};
@@ -449,6 +452,9 @@ export const createEvaluator: (
         return evaluateInteger(exp);
       case 'float':
         return evaluateFloat(exp);
+      case 'boolean':
+        // TODO: implement boolean literal
+        throw Error('Boolean literal not yet implemented');
       case 'step_sequence':
       case 'musical_binary':
         return {type: 'sequence', value: evaluateMusicalExpression(exp)};
