@@ -8,6 +8,7 @@ export enum TokenType {
   Keyword,
   Identifier,
   Float,
+  Boolean,
 }
 
 const punctuationStrings = ['{', '}', ',', '|', ';', '(', ')'] as const;
@@ -73,6 +74,11 @@ export type IdentifierToken = {
   value: string;
 };
 
+export type BooleanToken = {
+  type: TokenType.Boolean;
+  value: boolean;
+};
+
 export type Token =
   | EOFToken
   | PunctuationToken
@@ -80,7 +86,8 @@ export type Token =
   | OperatorToken
   | KeywordToken
   | IdentifierToken
-  | FloatToken;
+  | FloatToken
+  | BooleanToken;
 
 export type TokenizerError = {
   type: 'error';
@@ -101,8 +108,9 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
   const stringIncludes: (str: string, ch: string) => boolean = (str, ch) =>
     str.indexOf(ch) !== -1;
 
+  // \u00a0 is non-breaking space
   const isWhitespace: (ch: string) => boolean = ch =>
-    stringIncludes(' \t\n\r', ch);
+    stringIncludes(' \t\n\r\u00a0', ch);
 
   const isNotLinefeed: (ch: string) => boolean = ch => ch !== '\n';
 
@@ -207,7 +215,10 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
     };
   };
 
-  const readIdentifier: () => IdentifierToken | KeywordToken = () => {
+  const readIdentifier: () =>
+    | IdentifierToken
+    | KeywordToken
+    | BooleanToken = () => {
     const value = readWhile(isIdentifierChar);
 
     if (keywordStrings.some(kw => kw === value)) {
@@ -215,6 +226,10 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
         type: TokenType.Keyword,
         value: value as KeywordString,
       };
+    } else if (value === 'true') {
+      return {type: TokenType.Boolean, value: true};
+    } else if (value === 'false') {
+      return {type: TokenType.Boolean, value: false};
     } else {
       return {
         type: TokenType.Identifier,
@@ -238,11 +253,11 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
     if (isDigit(ch)) {
       return readNumber();
     }
-    if (isPunctuation(ch)) {
-      return readPunctuation();
-    }
     if (isOperatorChar(ch)) {
       return readOperator();
+    }
+    if (isPunctuation(ch)) {
+      return readPunctuation();
     }
     if (isIdentifierStartChar(ch)) {
       return readIdentifier();

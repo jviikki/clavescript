@@ -10,6 +10,11 @@ export type Float = {
   value: number;
 };
 
+export type BooleanLiteral = {
+  type: 'boolean';
+  value: boolean;
+};
+
 export type Identifier = {
   type: 'identifier';
   name: string;
@@ -106,7 +111,8 @@ export type Expression =
   | MusicalProcedure
   | Identifier
   | Integer
-  | Float;
+  | Float
+  | BooleanLiteral;
 
 export type Statement = Assignment | BuiltInCommand | Expression;
 
@@ -149,6 +155,18 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
       );
     return {
       type: 'float',
+      value: next.value,
+    };
+  };
+
+  const parseBoolean: () => BooleanLiteral = () => {
+    const next = tokenizer.next();
+    if (next.type !== TokenType.Boolean)
+      throw new Error(
+        `Parse error: Expected boolean on line ${tokenizer.line()} (column ${tokenizer.col()})`
+      );
+    return {
+      type: 'boolean',
       value: next.value,
     };
   };
@@ -497,51 +515,6 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
   };
 
-  // const parseMusicalExpressionWithBP: (
-  //   minBP: number
-  // ) => MusicalExpression = minBP => {
-  //   let lhs: MusicalExpression | null = null;
-  //   const token = tokenizer.peek();
-  //   switch (token.type) {
-  //     case TokenType.Punctuation:
-  //       if (token.value === '(') {
-  //         assertPunc('(');
-  //         lhs = parseMusicalExpressionWithBP(0);
-  //         assertPunc(')');
-  //         break;
-  //       } else if (token.value === '{') {
-  //         lhs = parseStepSequence();
-  //         break;
-  //       }
-  //       throw new Error(
-  //         `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
-  //       );
-  //     default:
-  //       throw new Error(
-  //         `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
-  //       );
-  //   }
-  //
-  //   // eslint-disable-next-line no-constant-condition
-  //   while (true) {
-  //     const token = tokenizer.peek();
-  //     if (token.type !== TokenType.Operator) break;
-  //     if (token.value !== ':+:' && token.value !== ':=:') break;
-  //     const [leftBP, rightBP] = getOperatorBindingPower(token.value);
-  //     if (leftBP < minBP) break;
-  //     tokenizer.next();
-  //     const rhs = parseMusicalExpressionWithBP(rightBP);
-  //     lhs = {
-  //       type: 'musical_binary',
-  //       operator: token.value,
-  //       left: lhs,
-  //       right: rhs,
-  //     };
-  //   }
-  //
-  //   return lhs;
-  // };
-
   const parseExpressionWithBP: (minBP: number) => Expression = minBP => {
     let lhs: Expression | null = null;
     const token = tokenizer.peek();
@@ -554,6 +527,9 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
         break;
       case TokenType.Integer:
         lhs = parseInteger();
+        break;
+      case TokenType.Boolean:
+        lhs = parseBoolean();
         break;
       case TokenType.Punctuation:
         if (token.value === '(') {
