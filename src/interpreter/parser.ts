@@ -459,7 +459,7 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
   };
 
-  const getInfixOperatorBindingPower: (op: '(') => BindingPower = op => {
+  const getPostfixOperatorBindingPower: (op: '(') => BindingPower = op => {
     switch (op) {
       case '(':
         return [17, 0];
@@ -468,9 +468,9 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
   };
 
-  const getPostfixOperatorBindingPower: (
+  const getInfixOperatorBindingPower: (
     op: BinaryOperatorType
-  ) => BindingPower = op => {
+  ) => BindingPower | null = op => {
     switch (op) {
       case '/':
       case '*':
@@ -493,7 +493,7 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
       case ':=':
         return [2, 1];
       default:
-        throw new Error(`Parse error: Unrecognized operator ${op}`);
+        return null;
     }
   };
 
@@ -542,10 +542,19 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
   //   return lhs;
   // };
 
-  const parseExpressionWithBP: (minBP: number) => Expression = minBp => {
+  const parseExpressionWithBP: (minBP: number) => Expression = minBP => {
     let lhs: Expression | null = null;
     const token = tokenizer.peek();
     switch (token.type) {
+      case TokenType.Identifier:
+        lhs = parseIdentifier();
+        break;
+      case TokenType.Float:
+        lhs = parseFloat();
+        break;
+      case TokenType.Integer:
+        lhs = parseInteger();
+        break;
       case TokenType.Punctuation:
         if (token.value === '(') {
           assertPunc('(');
@@ -558,11 +567,13 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
         );
       case TokenType.Operator:
         {
+          // Prefix operators
           if (token.value !== '!' && token.value !== '-')
             throw new Error(
               `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
             );
           const rbp = getPrefixOperatorBindingPower(token.value);
+          tokenizer.next();
           lhs = {
             type: 'unary_operator',
             operator: token.value,
@@ -577,9 +588,32 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
 
     for (;;) {
-      const token = tokenizer.peek();
+      const op = tokenizer.peek();
 
-      break;
+      // Postfix operators
+      if (op.type === TokenType.Punctuation && op.value === '(') {
+        const bp = getPostfixOperatorBindingPower(op.value);
+        if (bp[0] < minBP) break;
+        tokenizer.next();
+        // TODO: implement parsing of function calls
+        throw Error('Function calls parsing not implemented yet.');
+      }
+
+      // Infix operators
+      if (op.type !== TokenType.Operator) break;
+      if (op.value === '!' || op.value === ':=:' || op.value === ':+:') break;
+      const bp = getInfixOperatorBindingPower(op.value);
+      if (!bp) break;
+      const [leftBP, rightBP] = bp;
+      if (leftBP < minBP) break;
+      tokenizer.next();
+      const rhs = parseExpressionWithBP(rightBP);
+      lhs = {
+        type: 'binary_operator',
+        operator: op.value,
+        left: lhs,
+        right: rhs,
+      };
     }
 
     return lhs;

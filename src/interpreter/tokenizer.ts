@@ -113,7 +113,7 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
     punctuationStrings.find((p: PunctuationString) => p === ch) !== undefined;
 
   const isOperatorChar: (ch: string) => boolean = ch =>
-    stringIncludes('=:+-', ch);
+    stringIncludes('!&*+-/:<=>|', ch);
 
   const isIdentifierStartChar: (ch: string) => boolean = ch =>
     /[a-z_]/i.test(ch);
