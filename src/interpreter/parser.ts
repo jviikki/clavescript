@@ -570,9 +570,8 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
       if (op.type === TokenType.Punctuation && op.value === '(') {
         const bp = getPostfixOperatorBindingPower(op.value);
         if (bp[0] < minBP) break;
-        tokenizer.next();
-        // TODO: implement parsing of function calls
-        throw Error('Function calls parsing not implemented yet.');
+        lhs = parseCall(lhs);
+        continue;
       }
 
       // Infix operators
