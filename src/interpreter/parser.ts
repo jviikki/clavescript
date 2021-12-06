@@ -85,7 +85,9 @@ export type BinaryOperatorType =
   | '=='
   | '&&'
   | '||'
-  | ':=';
+  | ':='
+  | ':=:'
+  | ':+:';
 
 export type BinaryOperator = {
   type: 'binary_operator';
@@ -188,6 +190,12 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
 
   const parseStepSequence: () => StepSequence = () => {
     const pattern: (Integer | Identifier | StepRest)[] = [];
+
+    const t = tokenizer.next();
+    if (t.type !== TokenType.Keyword || t.value !== 'step')
+      throw new Error(
+        `Unable to parse step pattern on line ${tokenizer.line()} (column ${tokenizer.col()})`
+      );
 
     assertPunc('{');
     // eslint-disable-next-line no-constant-condition
@@ -490,6 +498,10 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     op: BinaryOperatorType
   ) => BindingPower | null = op => {
     switch (op) {
+      case ':=:':
+        return [3, 4];
+      case ':+:':
+        return [1, 2];
       case '/':
       case '*':
         return [13, 14];
@@ -515,6 +527,26 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
   };
 
+  const parseExpressionKeyword: () =>
+    | StepSequence
+    | FunctionDefinition = () => {
+    const token = tokenizer.peek();
+    if (token.type !== TokenType.Keyword)
+      throw new Error(
+        `Parse error: Expected a keyword on line ${tokenizer.line()} (column ${tokenizer.col()})`
+      );
+    switch (token.value) {
+      case 'step':
+        return parseStepSequence();
+      case 'fun':
+        return parseFunctionDefinition();
+      default:
+        throw new Error(
+          `Parse error: Expected a step sequence or function declaration on line ${tokenizer.line()} (column ${tokenizer.col()})`
+        );
+    }
+  };
+
   const parseExpressionWithBP: (minBP: number) => Expression = minBP => {
     let lhs: Expression | null = null;
     const token = tokenizer.peek();
@@ -530,6 +562,9 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
         break;
       case TokenType.Boolean:
         lhs = parseBoolean();
+        break;
+      case TokenType.Keyword:
+        lhs = parseExpressionKeyword();
         break;
       case TokenType.Punctuation:
         if (token.value === '(') {
@@ -576,7 +611,7 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
 
       // Infix operators
       if (op.type !== TokenType.Operator) break;
-      if (op.value === '!' || op.value === ':=:' || op.value === ':+:') break;
+      if (op.value === '!') break;
       const bp = getInfixOperatorBindingPower(op.value);
       if (!bp) break;
       const [leftBP, rightBP] = bp;

@@ -10,17 +10,17 @@ describe('parser', () => {
       'tempo 100; # set the tempo here\n' +
       '\n' +
       'pattern :=\n' +
-      '  { x -  | x := 88 }        :=:\n' +
-      '  { x - x - - x | x := 44 } :=:\n' +
-      '  { x - - - | x := 25 }     :+:\n' +
+      '  step { x -  | x := 88 }        :=:\n' +
+      '  step { x - x - - x | x := 44 } :=:\n' +
+      '  step { x - - - | x := 25 }     :+:\n' +
       '\n' +
-      '  { x - x y | x := 88, y := 39 }     :=:\n' +
-      '  { x - x - | x := 44 }     :=:\n' +
-      '  { x - - - | x := 25 }     :+:\n' +
+      '  step { x - x y | x := 88, y := 39 }     :=:\n' +
+      '  step { x - x - | x := 44 }     :=:\n' +
+      '  step { x - - - | x := 25 }     :+:\n' +
       '\n' +
-      '(  { x - x - | x := 88 }    :=:\n' +
-      '   { x - x | x := 44 }      :=:\n' +
-      '   { x - - 60 | x := 25 }  );\n' +
+      '(  step { x - x - | x := 88 }    :=:\n' +
+      '   step { x - x | x := 44 }      :=:\n' +
+      '   step { x - - 60 | x := 25 }  );\n' +
       '\n' +
       '# Some more comments\n' +
       'pattern2 := seq {\n' +
