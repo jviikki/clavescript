@@ -13,6 +13,7 @@ import {
   FunctionCall,
   FunctionDefinition,
   Statement,
+  BinaryOperator,
 } from './parser';
 import {
   EventSourceSequence,
@@ -141,6 +142,16 @@ export const createEvaluator: (
     ctx,
     exp
   ) => {
+    ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
+  };
+
+  const evaluateAssignmentExpression: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => void = (ctx, exp) => {
+    if (exp.operator !== ':=' || exp.left.type !== 'identifier')
+      throw Error('Assignment only allowed to an identifier');
+
     ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
   };
 
@@ -605,6 +616,9 @@ export const createEvaluator: (
   const evaluate: (program: Block) => void = program => {
     program.statements.forEach(stmt => {
       switch (stmt.type) {
+        case 'binary_operator':
+          evaluateAssignmentExpression(ctx, stmt);
+          break;
         case 'assignment':
           evaluateAssignment(ctx, stmt);
           break;

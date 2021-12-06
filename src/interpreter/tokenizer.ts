@@ -37,7 +37,7 @@ type OperatorString = typeof operatorStrings[number];
 const commandStrings = ['loop', 'tempo', 'play', 'sleep'] as const;
 export type CommandString = typeof commandStrings[number];
 
-const keywordStrings = ['seq', 'fun', ...commandStrings] as const;
+const keywordStrings = ['seq', 'fun', 'step', ...commandStrings] as const;
 export type KeywordString = typeof keywordStrings[number];
 
 export type EOFToken = {
@@ -197,16 +197,27 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
     };
   };
 
-  const readOperator: () => OperatorToken | TokenizerError = () => {
+  const readOperator: () =>
+    | OperatorToken
+    | PunctuationToken
+    | TokenizerError = () => {
     const op = readWhile(isOperatorChar);
     const opString: OperatorString | undefined = operatorStrings.find(
       (o: OperatorString) => o === op
     );
     if (opString === undefined) {
-      return {
-        type: 'error',
-        msg: `Unrecognized operator ${op} on line ${input.line()} (column ${input.col()})`,
-      };
+      // TODO: This is horrible. Move this away from operator function.
+      if (op === '|') {
+        return {
+          type: TokenType.Punctuation,
+          value: '|',
+        };
+      } else {
+        return {
+          type: 'error',
+          msg: `Unrecognized operator ${op} on line ${input.line()} (column ${input.col()})`,
+        };
+      }
     }
 
     return {
