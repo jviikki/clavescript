@@ -96,7 +96,7 @@ export type BinaryOperator = {
   right: Expression;
 };
 
-export type UnaryOperatorType = '!' | '-' | 'call';
+export type UnaryOperatorType = '!' | '-';
 
 export type UnaryOperator = {
   type: 'unary_operator';
@@ -109,14 +109,15 @@ export type Expression =
   | UnaryOperator
   | FunctionDefinition
   | FunctionCall
-  | MusicalExpression
-  | MusicalProcedure
+  // | MusicalExpression
+  // | MusicalProcedure
+  | StepSequence
   | Identifier
   | Integer
   | Float
   | BooleanLiteral;
 
-export type Statement = Assignment | BuiltInCommand | Expression;
+export type Statement = BuiltInCommand | Expression;
 
 export type Block = {
   type: 'block';
@@ -631,22 +632,22 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
 
   const parseExpression: () => Expression = () => parseExpressionWithBP(0);
 
-  const parseExpressionObsolete: () => Expression = () => {
-    const next = tokenizer.peek();
-    if (next.type === TokenType.Integer) {
-      return parseInteger();
-    } else if (next.type === TokenType.Float) {
-      return parseFloat();
-    } else if (next.type === TokenType.Identifier) {
-      return maybeCall(parseIdentifier);
-    } else if (next.type === TokenType.Keyword && next.value === 'seq') {
-      return parseMusicalProcedure();
-    } else if (next.type === TokenType.Keyword && next.value === 'fun') {
-      return parseFunctionDefinition();
-    } else {
-      return parseMusicalExpression();
-    }
-  };
+  // const parseExpressionObsolete: () => Expression = () => {
+  //   const next = tokenizer.peek();
+  //   if (next.type === TokenType.Integer) {
+  //     return parseInteger();
+  //   } else if (next.type === TokenType.Float) {
+  //     return parseFloat();
+  //   } else if (next.type === TokenType.Identifier) {
+  //     return maybeCall(parseIdentifier);
+  //   } else if (next.type === TokenType.Keyword && next.value === 'seq') {
+  //     return parseMusicalProcedure();
+  //   } else if (next.type === TokenType.Keyword && next.value === 'fun') {
+  //     return parseFunctionDefinition();
+  //   } else {
+  //     return parseMusicalExpression();
+  //   }
+  // };
 
   const parseStatement: () => Statement = () => {
     const next = tokenizer.peek();
@@ -656,18 +657,7 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
         if (next.value === 'fun') return parseExpression();
         else return parseBuiltInCommand();
       default:
-        // eslint-disable-next-line no-case-declarations
-        const exp = parseExpression();
-        if (exp.type === 'identifier') {
-          const nextFromId = tokenizer.peek();
-          if (
-            nextFromId.type === TokenType.Operator &&
-            nextFromId.value === ':='
-          ) {
-            return parseAssignmentToIdentifier(exp);
-          }
-        }
-        return exp;
+        return parseExpression();
     }
   };
 
