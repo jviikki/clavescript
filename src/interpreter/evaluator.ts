@@ -14,6 +14,8 @@ import {
   FunctionDefinition,
   Statement,
   BinaryOperator,
+  UnaryOperator,
+  BooleanLiteral,
 } from './parser';
 import {
   EventSourceSequence,
@@ -34,12 +36,16 @@ type VariableMusicalEventSource = {
   value: MusicalEventSource;
 };
 type VariableFunctionDefinition = {type: 'fun'; value: FunctionDefinition};
+type VariableBoolean = {type: 'boolean'; value: boolean};
+type VariableNil = {type: 'nil'};
 
 type VariableValue =
   | VariableNumber
   | VariableSequence
   | VariableMusicalEventSource
-  | VariableFunctionDefinition;
+  | VariableFunctionDefinition
+  | VariableBoolean
+  | VariableNil;
 
 type Environment = {
   extend(): Environment;
@@ -253,7 +259,7 @@ export const createEvaluator: (
   function* evaluateFunctionCall(
     ctx: Context,
     stmt: FunctionCall
-  ): Generator<SequenceAndPlayheadPos, void, number> {
+  ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
     console.log('evaluating function call');
     // TODO: accept all expressions
     if (stmt.func.type !== 'identifier') {
@@ -292,6 +298,7 @@ export const createEvaluator: (
     // yield* evaluateFunctionBody(newCtx, func.value.body);
     yield* evaluateFunctionBody(ctx, func.value.body);
     ctx.env = oldEnv;
+    return {type: 'nil'};
   }
 
   // eslint-disable-next-line require-yield
@@ -336,13 +343,14 @@ export const createEvaluator: (
         // TODO: Implement boolean literal
         throw Error('Boolean literal not yet implemented');
       case 'step_sequence':
-      case 'musical_binary':
         return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      case 'musical_procedure':
-        return {
-          type: 'musical_event_source',
-          value: evaluateMusicalProcedure(ctx, exp),
-        };
+      // case 'musical_binary':
+      //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+      // case 'musical_procedure':
+      //   return {
+      //     type: 'musical_event_source',
+      //     value: evaluateMusicalProcedure(ctx, exp),
+      //   };
       case 'fun':
         return {
           type: 'fun',
@@ -370,9 +378,10 @@ export const createEvaluator: (
       }
     } else if (stmt.type === 'call') {
       yield* evaluateFunctionCall(ctx, stmt);
-    } else if (stmt.type === 'assignment') {
-      yield* evaluateAssignmentGen(ctx, stmt);
     }
+    // else if (stmt.type === 'assignment') {
+    //   yield* evaluateAssignmentGen(ctx, stmt);
+    // }
   }
 
   function* evaluateFunctionBody(
@@ -467,13 +476,14 @@ export const createEvaluator: (
         // TODO: implement boolean literal
         throw Error('Boolean literal not yet implemented');
       case 'step_sequence':
-      case 'musical_binary':
         return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      case 'musical_procedure':
-        return {
-          type: 'musical_event_source',
-          value: evaluateMusicalProcedure(ctx, exp),
-        };
+      // case 'musical_binary':
+      //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+      // case 'musical_procedure':
+      //   return {
+      //     type: 'musical_event_source',
+      //     value: evaluateMusicalProcedure(ctx, exp),
+      //   };
       case 'fun':
         return {
           type: 'fun',
@@ -613,20 +623,105 @@ export const createEvaluator: (
     }
   };
 
+  const evaluateUnaryOperator: (
+    ctx: Context,
+    exp: UnaryOperator
+  ) => VariableValue = (ctx, exp) => {
+    const value = evaluateExpression(ctx, exp.operand);
+    switch (exp.operator) {
+      case '!': {
+        if (value.type !== 'boolean') throw Error('Expecting a boolean');
+        return {type: 'boolean', value: !value.value};
+      }
+      case '-': {
+        if (value.type !== 'number') throw Error('Expecting a number');
+        return {type: 'number', value: -value.value};
+      }
+    }
+  };
+
+  const evaluateBoolean: (exp: BooleanLiteral) => VariableBoolean = exp => ({
+    type: 'boolean',
+    value: exp.value,
+  });
+
+  const evaluateAddition: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableNumber = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type !== 'number' || right.type !== 'number')
+      throw Error('Operands of + operator should be numbers');
+    return {type: 'number', value: left.value + right.value};
+  };
+
+  const evaluateBinaryOperator: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableValue = (ctx, exp) => {
+    switch (exp.operator) {
+      case '-':
+      case ':+:':
+      case '!=':
+      case '&&':
+      case '*':
+        return {type: 'nil'};
+      case '+':
+        return evaluateAddition(ctx, exp);
+      case '/':
+      case ':=':
+      case ':=:':
+      case '<':
+      case '<=':
+      case '==':
+      case '>':
+      case '>=':
+      case '||':
+        return {type: 'nil'};
+    }
+  };
+
+  const evaluateExpression: (ctx: Context, exp: Expression) => VariableValue = (
+    ctx,
+    exp
+  ) => {
+    switch (exp.type) {
+      case 'boolean':
+        return evaluateBoolean(exp);
+      case 'integer':
+        return evaluateInteger(exp);
+      case 'float':
+        return evaluateFloat(exp);
+      case 'identifier':
+        return evaluateIdentifier(ctx, exp);
+      case 'step_sequence':
+        // TODO: change function to return correct value
+        return {type: 'sequence', value: evaluateStepSequence(exp)};
+      case 'unary_operator':
+        return evaluateUnaryOperator(ctx, exp);
+      case 'binary_operator':
+        return evaluateBinaryOperator(ctx, exp);
+      case 'fun':
+        // TODO: change function to return the correct value directly
+        return {
+          type: 'fun',
+          value: runGenerator(evaluateFunctionDefinition(ctx, exp)),
+        };
+      case 'call':
+        return runGenerator(evaluateFunctionCall(ctx, exp));
+    }
+  };
+
   const evaluate: (program: Block) => void = program => {
     program.statements.forEach(stmt => {
       switch (stmt.type) {
-        case 'binary_operator':
-          evaluateAssignmentExpression(ctx, stmt);
-          break;
-        case 'assignment':
-          evaluateAssignment(ctx, stmt);
-          break;
         case 'cmd':
           evaluateCmd(ctx, stmt);
           break;
-        case 'call':
-          throw new Error('Evaluation of function call is not implemented yet');
+        default:
+          console.log(evaluateExpression(ctx, stmt));
+          break;
       }
     });
     sequencer.play();

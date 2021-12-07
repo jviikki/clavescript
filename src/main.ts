@@ -18,6 +18,12 @@ const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
 
   const tokenizer = createTokenizer(createInputStream(input));
 
+  // while (!tokenizer.eof()) {
+  //   const t = tokenizer.next();
+  //   console.log(t);
+  //   if (t.type === 'error') break;
+  // }
+
   try {
     const program = parse(tokenizer);
     console.log(program);
