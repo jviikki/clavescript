@@ -720,7 +720,7 @@ export const createEvaluator: (
     const left = evaluateExpression(ctx, exp.left);
     if (left.type !== 'boolean')
       throw Error('First operand of && operator should be a boolean');
-    if (left.value === false) return {type: 'boolean', value: false};
+    if (!left.value) return {type: 'boolean', value: false};
     const right = evaluateExpression(ctx, exp.right);
     if (right.type !== 'boolean')
       throw Error('Second operand of && operator should be a boolean');
@@ -781,6 +781,81 @@ export const createEvaluator: (
     };
   };
 
+  const evaluateLessThan: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type === 'number' && right.type === 'number') {
+      return {type: 'boolean', value: left.value < right.value};
+    }
+    throw Error('Comparison < between incompatible types');
+  };
+
+  const evaluateLessThanOrEqualTo: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type === 'number' && right.type === 'number') {
+      return {type: 'boolean', value: left.value <= right.value};
+    }
+    throw Error('Comparison <= between incompatible types');
+  };
+
+  const evaluateEqualTo: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type === 'number' && right.type === 'number') {
+      return {type: 'boolean', value: left.value === right.value};
+    }
+
+    throw Error('Comparison == between incompatible types');
+  };
+
+  const evaluateGreaterThan: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type === 'number' && right.type === 'number') {
+      return {type: 'boolean', value: left.value > right.value};
+    }
+    throw Error('Comparison > between incompatible types');
+  };
+
+  const evaluateGreaterThanOrEqualTo: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type === 'number' && right.type === 'number') {
+      return {type: 'boolean', value: left.value >= right.value};
+    }
+    throw Error('Comparison >= between incompatible types');
+  };
+
+  const evaluateLogicalOr: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    if (left.type !== 'boolean')
+      throw Error('First operand of || operator should be a boolean');
+    if (left.value) return {type: 'boolean', value: true};
+    const right = evaluateExpression(ctx, exp.right);
+    if (right.type !== 'boolean')
+      throw Error('Second operand of && operator should be a boolean');
+    return {type: 'boolean', value: left.value || right.value};
+  };
+
   const evaluateBinaryOperator: (
     ctx: Context,
     exp: BinaryOperator
@@ -805,12 +880,17 @@ export const createEvaluator: (
       case ':=:':
         return evaluateStackOperator(ctx, exp);
       case '<':
+        return evaluateLessThan(ctx, exp);
       case '<=':
+        return evaluateLessThanOrEqualTo(ctx, exp);
       case '==':
+        return evaluateEqualTo(ctx, exp);
       case '>':
+        return evaluateGreaterThan(ctx, exp);
       case '>=':
+        return evaluateGreaterThanOrEqualTo(ctx, exp);
       case '||':
-        return {type: 'nil'};
+        return evaluateLogicalOr(ctx, exp);
     }
   };
 
