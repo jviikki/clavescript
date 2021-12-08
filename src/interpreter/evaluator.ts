@@ -761,6 +761,26 @@ export const createEvaluator: (
     return value;
   };
 
+  const evaluateStackOperator: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableSequence = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+
+    if (left.type !== 'sequence' || right.type !== 'sequence') {
+      throw Error('Operands of :+: operator should be sequences');
+    }
+
+    return {
+      type: 'sequence',
+      value: left.value.concat(right.value).sort((a, b) => {
+        if (a.type === 'PITCH_BEND' || b.type === 'PITCH_BEND') return 0;
+        return a.startTime - b.startTime;
+      }),
+    };
+  };
+
   const evaluateBinaryOperator: (
     ctx: Context,
     exp: BinaryOperator
@@ -783,6 +803,7 @@ export const createEvaluator: (
       case ':=':
         return evaluateAssignment(ctx, exp);
       case ':=:':
+        return evaluateStackOperator(ctx, exp);
       case '<':
       case '<=':
       case '==':
