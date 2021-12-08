@@ -144,7 +144,7 @@ export const createEvaluator: (
     playUntil: 0,
   };
 
-  const evaluateAssignment: (ctx: Context, exp: Assignment) => void = (
+  const evaluateAssignmentOld: (ctx: Context, exp: Assignment) => void = (
     ctx,
     exp
   ) => {
@@ -656,21 +656,132 @@ export const createEvaluator: (
     return {type: 'number', value: left.value + right.value};
   };
 
+  const evaluateSubtraction: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableNumber = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type !== 'number' || right.type !== 'number')
+      throw Error('Operands of - operator should be numbers');
+    return {type: 'number', value: left.value - right.value};
+  };
+
+  const evaluateSequenceOperator: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableSequence = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type !== 'sequence' || right.type !== 'sequence') {
+      throw Error('Operands of :+: operator should be sequences');
+    }
+
+    if (left.value.length === 0) return right;
+
+    const lastNote = left.value[left.value.length - 1];
+    if (lastNote.type === 'PITCH_BEND') return right; // TODO: find last note
+    const offset = lastNote.startTime + lastNote.duration;
+
+    return {
+      type: 'sequence',
+      value: left.value.concat(
+        right.value.map(n => {
+          if (n.type === 'PITCH_BEND') {
+            return {...n, time: n.time + offset};
+          } else {
+            return {...n, startTime: n.startTime + offset};
+          }
+        })
+      ),
+    };
+  };
+
+  const evaluateUnequalTo: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (
+      (left.type === 'number' && right.type === 'number') ||
+      (left.type === 'boolean' && right.type === 'boolean')
+    ) {
+      return {type: 'boolean', value: left.value !== right.value};
+    }
+
+    throw Error('Comparison != between incompatible types');
+  };
+
+  const evaluateLogicalAnd: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableBoolean = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    if (left.type !== 'boolean')
+      throw Error('First operand of && operator should be a boolean');
+    if (left.value === false) return {type: 'boolean', value: false};
+    const right = evaluateExpression(ctx, exp.right);
+    if (right.type !== 'boolean')
+      throw Error('Second operand of && operator should be a boolean');
+    return {type: 'boolean', value: left.value && right.value};
+  };
+
+  const evaluateMultiplication: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableNumber = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type !== 'number' || right.type !== 'number')
+      throw Error('Operands of - operator should be numbers');
+    return {type: 'number', value: left.value * right.value};
+  };
+
+  const evaluateDivision: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableNumber = (ctx, exp) => {
+    const left = evaluateExpression(ctx, exp.left);
+    const right = evaluateExpression(ctx, exp.right);
+    if (left.type !== 'number' || right.type !== 'number')
+      throw Error('Operands of - operator should be numbers');
+    if (left.value === 0) throw Error('Division by zero');
+    return {type: 'number', value: left.value / right.value};
+  };
+
+  const evaluateAssignment: (
+    ctx: Context,
+    exp: BinaryOperator
+  ) => VariableValue = (ctx, exp) => {
+    if (exp.left.type !== 'identifier')
+      throw Error('Left operand of assignment := needs to be an identifier');
+    const value = evaluateExpression(ctx, exp.right);
+    ctx.env.set(exp.left.name, value);
+    return value;
+  };
+
   const evaluateBinaryOperator: (
     ctx: Context,
     exp: BinaryOperator
   ) => VariableValue = (ctx, exp) => {
     switch (exp.operator) {
       case '-':
+        return evaluateSubtraction(ctx, exp);
       case ':+:':
+        return evaluateSequenceOperator(ctx, exp);
       case '!=':
+        return evaluateUnequalTo(ctx, exp);
       case '&&':
+        return evaluateLogicalAnd(ctx, exp);
       case '*':
-        return {type: 'nil'};
+        return evaluateMultiplication(ctx, exp);
       case '+':
         return evaluateAddition(ctx, exp);
       case '/':
+        return evaluateDivision(ctx, exp);
       case ':=':
+        return evaluateAssignment(ctx, exp);
       case ':=:':
       case '<':
       case '<=':
