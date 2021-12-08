@@ -654,7 +654,8 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     switch (next.type) {
       case TokenType.Keyword:
         // TODO: Maybe separate built-in commands and other keywords in lexer.
-        if (next.value === 'fun') return parseExpression();
+        if (next.value === 'fun' || next.value === 'step')
+          return parseExpression();
         else return parseBuiltInCommand();
       default:
         return parseExpression();
