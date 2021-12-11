@@ -346,11 +346,11 @@ export const createEvaluator: (
         return {type: 'sequence', value: evaluateMusicalExpression(exp)};
       // case 'musical_binary':
       //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      // case 'musical_procedure':
-      //   return {
-      //     type: 'musical_event_source',
-      //     value: evaluateMusicalProcedure(ctx, exp),
-      //   };
+      case 'musical_procedure':
+        return {
+          type: 'musical_event_source',
+          value: evaluateMusicalProcedure(ctx, exp),
+        };
       case 'fun':
         return {
           type: 'fun',
@@ -479,11 +479,11 @@ export const createEvaluator: (
         return {type: 'sequence', value: evaluateMusicalExpression(exp)};
       // case 'musical_binary':
       //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      // case 'musical_procedure':
-      //   return {
-      //     type: 'musical_event_source',
-      //     value: evaluateMusicalProcedure(ctx, exp),
-      //   };
+      case 'musical_procedure':
+        return {
+          type: 'musical_event_source',
+          value: evaluateMusicalProcedure(ctx, exp),
+        };
       case 'fun':
         return {
           type: 'fun',
@@ -922,6 +922,11 @@ export const createEvaluator: (
         };
       case 'call':
         return runGenerator(evaluateFunctionCall(ctx, exp));
+      case 'musical_procedure':
+        return {
+          type: 'musical_event_source',
+          value: evaluateMusicalProcedure(ctx, exp),
+        };
     }
   };
 
