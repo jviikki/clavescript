@@ -110,7 +110,7 @@ export type Expression =
   | FunctionDefinition
   | FunctionCall
   // | MusicalExpression
-  // | MusicalProcedure
+  | MusicalProcedure
   | StepSequence
   | Identifier
   | Integer
@@ -530,7 +530,8 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
 
   const parseExpressionKeyword: () =>
     | StepSequence
-    | FunctionDefinition = () => {
+    | FunctionDefinition
+    | MusicalProcedure = () => {
     const token = tokenizer.peek();
     if (token.type !== TokenType.Keyword)
       throw new Error(
@@ -541,6 +542,8 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
         return parseStepSequence();
       case 'fun':
         return parseFunctionDefinition();
+      case 'seq':
+        return parseMusicalProcedure();
       default:
         throw new Error(
           `Parse error: Expected a step sequence or function declaration on line ${tokenizer.line()} (column ${tokenizer.col()})`

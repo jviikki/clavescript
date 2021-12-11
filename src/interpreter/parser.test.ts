@@ -22,12 +22,12 @@ describe('parser', () => {
       '   step { x - x | x := 44 }      :=:\n' +
       '   step { x - - 60 | x := 25 }  );\n' +
       '\n' +
-      // '# Some more comments\n' +
-      // 'pattern2 := seq {\n' +
-      // '  play 40;' +
-      // '  sleep 2;\n' +
-      // '  play 41; \n' +
-      // '};\n' +
+      '# Some more comments\n' +
+      'pattern2 := seq {\n' +
+      '  play 40;' +
+      '  sleep 2;\n' +
+      '  play 41; \n' +
+      '};\n' +
       '\n' +
       'loop pattern; # start looping the pattern';
 
@@ -377,43 +377,43 @@ describe('parser', () => {
             },
           },
         },
-        // {
-        //   type: 'binary_operator',
-        //   operator: ':=',
-        //   left: {
-        //     type: 'identifier',
-        //     name: 'pattern2',
-        //   },
-        //   right: {
-        //     type: 'musical_procedure',
-        //     statements: [
-        //       {
-        //         type: 'cmd',
-        //         name: 'play',
-        //         arg: {
-        //           type: 'integer',
-        //           value: 40,
-        //         },
-        //       },
-        //       {
-        //         type: 'cmd',
-        //         name: 'sleep',
-        //         arg: {
-        //           type: 'integer',
-        //           value: 2,
-        //         },
-        //       },
-        //       {
-        //         type: 'cmd',
-        //         name: 'play',
-        //         arg: {
-        //           type: 'integer',
-        //           value: 41,
-        //         },
-        //       },
-        //     ],
-        //   },
-        // },
+        {
+          type: 'binary_operator',
+          operator: ':=',
+          left: {
+            type: 'identifier',
+            name: 'pattern2',
+          },
+          right: {
+            type: 'musical_procedure',
+            statements: [
+              {
+                type: 'cmd',
+                name: 'play',
+                arg: {
+                  type: 'integer',
+                  value: 40,
+                },
+              },
+              {
+                type: 'cmd',
+                name: 'sleep',
+                arg: {
+                  type: 'integer',
+                  value: 2,
+                },
+              },
+              {
+                type: 'cmd',
+                name: 'play',
+                arg: {
+                  type: 'integer',
+                  value: 41,
+                },
+              },
+            ],
+          },
+        },
         {
           type: 'cmd',
           name: 'loop',
