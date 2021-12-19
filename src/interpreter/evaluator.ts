@@ -145,23 +145,6 @@ export const createEvaluator: (
     playUntil: 0,
   };
 
-  // const evaluateAssignmentOld: (ctx: Context, exp: Assignment) => void = (
-  //   ctx,
-  //   exp
-  // ) => {
-  //   ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
-  // };
-
-  // const evaluateAssignmentExpression: (
-  //   ctx: Context,
-  //   exp: BinaryOperator
-  // ) => void = (ctx, exp) => {
-  //   if (exp.operator !== ':=' || exp.left.type !== 'identifier')
-  //     throw Error('Assignment only allowed to an identifier');
-  //
-  //   ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
-  // };
-
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,
     exp
@@ -304,57 +287,6 @@ export const createEvaluator: (
     return stmt;
   }
 
-  // eslint-disable-next-line require-yield
-  // function* evaluateAssignmentGen(
-  //   ctx: Context,
-  //   exp: Assignment
-  // ): Generator<SequenceAndPlayheadPos, void, number> {
-  //   ctx.env.set(
-  //     exp.left.name,
-  //     yield* evaluateAssignmentRightValueGen(ctx, exp.right)
-  //   );
-  // }
-
-  // eslint-disable-next-line require-yield
-  // function* evaluateAssignmentRightValueGen(
-  //   ctx: Context,
-  //   exp: Expression
-  // ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
-  //   switch (exp.type) {
-  //     case 'binary_operator':
-  //       // TODO: Implement binary operator
-  //       throw Error('Binary operator not yet implemented');
-  //     case 'unary_operator':
-  //       // TODO: Implement unary operator
-  //       throw Error('Unary operator not yet implemented');
-  //     case 'identifier':
-  //       return evaluateIdentifier(ctx, exp);
-  //     case 'integer':
-  //       return evaluateInteger(exp);
-  //     case 'float':
-  //       return evaluateFloat(exp);
-  //     case 'boolean':
-  //       // TODO: Implement boolean literal
-  //       throw Error('Boolean literal not yet implemented');
-  //     case 'step_sequence':
-  //       return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-  //     // case 'musical_binary':
-  //     //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-  //     case 'musical_procedure':
-  //       return {
-  //         type: 'musical_event_source',
-  //         value: evaluateMusicalProcedure(ctx, exp),
-  //       };
-  //     case 'fun':
-  //       return {
-  //         type: 'fun',
-  //         value: yield* evaluateFunctionDefinition(ctx, exp),
-  //       };
-  //     case 'call':
-  //       throw Error('Evaluation of function call not yet implemented');
-  //   }
-  // }
-
   function* evaluateStatement(ctx: Context, stmt: Statement): EventGen<void> {
     if (stmt.type === 'cmd') {
       switch (stmt.name) {
@@ -445,45 +377,6 @@ export const createEvaluator: (
       },
     };
   };
-
-  // const evaluateAssignmentRightValue: (
-  //   ctx: Context,
-  //   exp: Expression
-  // ) => VariableValue = (ctx, exp) => {
-  //   switch (exp.type) {
-  //     case 'unary_operator':
-  //       // TODO: Implement unary operator
-  //       throw Error('Unary operator not yet implemented');
-  //     case 'binary_operator':
-  //       // TODO: implement binary operator
-  //       throw Error('Binary operator not yet implemented');
-  //     case 'identifier':
-  //       return evaluateIdentifier(ctx, exp);
-  //     case 'integer':
-  //       return evaluateInteger(exp);
-  //     case 'float':
-  //       return evaluateFloat(exp);
-  //     case 'boolean':
-  //       // TODO: implement boolean literal
-  //       throw Error('Boolean literal not yet implemented');
-  //     case 'step_sequence':
-  //       return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-  //     // case 'musical_binary':
-  //     //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-  //     case 'musical_procedure':
-  //       return {
-  //         type: 'musical_event_source',
-  //         value: evaluateMusicalProcedure(ctx, exp),
-  //       };
-  //     case 'fun':
-  //       return {
-  //         type: 'fun',
-  //         value: runGenerator(evaluateFunctionDefinition(ctx, exp)),
-  //       };
-  //     case 'call':
-  //       throw new Error('Evaluation of function call is not implemented yet');
-  //   }
-  // };
 
   const evaluateMusicalExpression: (
     exp: MusicalExpression
@@ -587,10 +480,7 @@ export const createEvaluator: (
     });
   };
 
-  const evaluateCmd: (ctx: Context, exp: BuiltInCommand) => void = (
-    ctx,
-    exp
-  ) => {
+  function evaluateCmd(ctx: Context, exp: BuiltInCommand): void {
     switch (exp.name) {
       case 'loop':
         if (exp.arg.type === 'identifier') {
@@ -612,13 +502,13 @@ export const createEvaluator: (
         }
         break;
     }
-  };
+  }
 
-  const evaluateUnaryOperator: (
+  function* evaluateUnaryOperator(
     ctx: Context,
     exp: UnaryOperator
-  ) => VariableValue = (ctx, exp) => {
-    const value = evaluateExpression(ctx, exp.operand);
+  ): EventGen<VariableValue> {
+    const value = yield* evaluateExpression(ctx, exp.operand);
     switch (exp.operator) {
       case '!': {
         if (value.type !== 'boolean') throw Error('Expecting a boolean');
@@ -629,41 +519,41 @@ export const createEvaluator: (
         return {type: 'number', value: -value.value};
       }
     }
-  };
+  }
 
   const evaluateBoolean: (exp: BooleanLiteral) => VariableBoolean = exp => ({
     type: 'boolean',
     value: exp.value,
   });
 
-  const evaluateAddition: (
+  function* evaluateAddition(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableNumber = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableNumber> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type !== 'number' || right.type !== 'number')
       throw Error('Operands of + operator should be numbers');
     return {type: 'number', value: left.value + right.value};
-  };
+  }
 
-  const evaluateSubtraction: (
+  function* evaluateSubtraction(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableNumber = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableNumber> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type !== 'number' || right.type !== 'number')
       throw Error('Operands of - operator should be numbers');
     return {type: 'number', value: left.value - right.value};
-  };
+  }
 
-  const evaluateSequenceOperator: (
+  function* evaluateSequenceOperator(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableSequence = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableSequence> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type !== 'sequence' || right.type !== 'sequence') {
       throw Error('Operands of :+: operator should be sequences');
     }
@@ -686,14 +576,14 @@ export const createEvaluator: (
         })
       ),
     };
-  };
+  }
 
-  const evaluateUnequalTo: (
+  function* evaluateUnequalTo(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (
       (left.type === 'number' && right.type === 'number') ||
       (left.type === 'boolean' && right.type === 'boolean')
@@ -702,62 +592,62 @@ export const createEvaluator: (
     }
 
     throw Error('Comparison != between incompatible types');
-  };
+  }
 
-  const evaluateLogicalAnd: (
+  function* evaluateLogicalAnd(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
     if (left.type !== 'boolean')
       throw Error('First operand of && operator should be a boolean');
     if (!left.value) return {type: 'boolean', value: false};
-    const right = evaluateExpression(ctx, exp.right);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (right.type !== 'boolean')
       throw Error('Second operand of && operator should be a boolean');
     return {type: 'boolean', value: left.value && right.value};
-  };
+  }
 
-  const evaluateMultiplication: (
+  function* evaluateMultiplication(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableNumber = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableNumber> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type !== 'number' || right.type !== 'number')
       throw Error('Operands of - operator should be numbers');
     return {type: 'number', value: left.value * right.value};
-  };
+  }
 
-  const evaluateDivision: (
+  function* evaluateDivision(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableNumber = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableNumber> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type !== 'number' || right.type !== 'number')
       throw Error('Operands of - operator should be numbers');
     if (left.value === 0) throw Error('Division by zero');
     return {type: 'number', value: left.value / right.value};
-  };
+  }
 
-  const evaluateAssignment: (
+  function* evaluateAssignment(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableValue = (ctx, exp) => {
+  ): EventGen<VariableValue> {
     if (exp.left.type !== 'identifier')
       throw Error('Left operand of assignment := needs to be an identifier');
-    const value = evaluateExpression(ctx, exp.right);
+    const value = yield* evaluateExpression(ctx, exp.right);
     ctx.env.set(exp.left.name, value);
     return value;
-  };
+  }
 
-  const evaluateStackOperator: (
+  function* evaluateStackOperator(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableSequence = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableSequence> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
 
     if (left.type !== 'sequence' || right.type !== 'sequence') {
       throw Error('Operands of :+: operator should be sequences');
@@ -770,125 +660,125 @@ export const createEvaluator: (
         return a.startTime - b.startTime;
       }),
     };
-  };
+  }
 
-  const evaluateLessThan: (
+  function* evaluateLessThan(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type === 'number' && right.type === 'number') {
       return {type: 'boolean', value: left.value < right.value};
     }
     throw Error('Comparison < between incompatible types');
-  };
+  }
 
-  const evaluateLessThanOrEqualTo: (
+  function* evaluateLessThanOrEqualTo(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type === 'number' && right.type === 'number') {
       return {type: 'boolean', value: left.value <= right.value};
     }
     throw Error('Comparison <= between incompatible types');
-  };
+  }
 
-  const evaluateEqualTo: (
+  function* evaluateEqualTo(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type === 'number' && right.type === 'number') {
       return {type: 'boolean', value: left.value === right.value};
     }
 
     throw Error('Comparison == between incompatible types');
-  };
+  }
 
-  const evaluateGreaterThan: (
+  function* evaluateGreaterThan(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type === 'number' && right.type === 'number') {
       return {type: 'boolean', value: left.value > right.value};
     }
     throw Error('Comparison > between incompatible types');
-  };
+  }
 
-  const evaluateGreaterThanOrEqualTo: (
+  function* evaluateGreaterThanOrEqualTo(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
-    const right = evaluateExpression(ctx, exp.right);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type === 'number' && right.type === 'number') {
       return {type: 'boolean', value: left.value >= right.value};
     }
     throw Error('Comparison >= between incompatible types');
-  };
+  }
 
-  const evaluateLogicalOr: (
+  function* evaluateLogicalOr(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableBoolean = (ctx, exp) => {
-    const left = evaluateExpression(ctx, exp.left);
+  ): EventGen<VariableBoolean> {
+    const left = yield* evaluateExpression(ctx, exp.left);
     if (left.type !== 'boolean')
       throw Error('First operand of || operator should be a boolean');
     if (left.value) return {type: 'boolean', value: true};
-    const right = evaluateExpression(ctx, exp.right);
+    const right = yield* evaluateExpression(ctx, exp.right);
     if (right.type !== 'boolean')
       throw Error('Second operand of && operator should be a boolean');
     return {type: 'boolean', value: left.value || right.value};
-  };
+  }
 
-  const evaluateBinaryOperator: (
+  function* evaluateBinaryOperator(
     ctx: Context,
     exp: BinaryOperator
-  ) => VariableValue = (ctx, exp) => {
+  ): EventGen<VariableValue> {
     switch (exp.operator) {
       case '-':
-        return evaluateSubtraction(ctx, exp);
+        return yield* evaluateSubtraction(ctx, exp);
       case ':+:':
-        return evaluateSequenceOperator(ctx, exp);
+        return yield* evaluateSequenceOperator(ctx, exp);
       case '!=':
-        return evaluateUnequalTo(ctx, exp);
+        return yield* evaluateUnequalTo(ctx, exp);
       case '&&':
-        return evaluateLogicalAnd(ctx, exp);
+        return yield* evaluateLogicalAnd(ctx, exp);
       case '*':
-        return evaluateMultiplication(ctx, exp);
+        return yield* evaluateMultiplication(ctx, exp);
       case '+':
-        return evaluateAddition(ctx, exp);
+        return yield* evaluateAddition(ctx, exp);
       case '/':
-        return evaluateDivision(ctx, exp);
+        return yield* evaluateDivision(ctx, exp);
       case ':=':
-        return evaluateAssignment(ctx, exp);
+        return yield* evaluateAssignment(ctx, exp);
       case ':=:':
-        return evaluateStackOperator(ctx, exp);
+        return yield* evaluateStackOperator(ctx, exp);
       case '<':
-        return evaluateLessThan(ctx, exp);
+        return yield* evaluateLessThan(ctx, exp);
       case '<=':
-        return evaluateLessThanOrEqualTo(ctx, exp);
+        return yield* evaluateLessThanOrEqualTo(ctx, exp);
       case '==':
-        return evaluateEqualTo(ctx, exp);
+        return yield* evaluateEqualTo(ctx, exp);
       case '>':
-        return evaluateGreaterThan(ctx, exp);
+        return yield* evaluateGreaterThan(ctx, exp);
       case '>=':
-        return evaluateGreaterThanOrEqualTo(ctx, exp);
+        return yield* evaluateGreaterThanOrEqualTo(ctx, exp);
       case '||':
-        return evaluateLogicalOr(ctx, exp);
+        return yield* evaluateLogicalOr(ctx, exp);
     }
-  };
+  }
 
-  const evaluateExpression: (ctx: Context, exp: Expression) => VariableValue = (
-    ctx,
-    exp
-  ) => {
+  function* evaluateExpression(
+    ctx: Context,
+    exp: Expression
+  ): EventGen<VariableValue> {
     switch (exp.type) {
       case 'boolean':
         return evaluateBoolean(exp);
@@ -902,26 +792,26 @@ export const createEvaluator: (
         // TODO: change function to return correct value
         return {type: 'sequence', value: evaluateStepSequence(exp)};
       case 'unary_operator':
-        return evaluateUnaryOperator(ctx, exp);
+        return yield* evaluateUnaryOperator(ctx, exp);
       case 'binary_operator':
-        return evaluateBinaryOperator(ctx, exp);
+        return yield* evaluateBinaryOperator(ctx, exp);
       case 'fun':
         // TODO: change function to return the correct value directly
         return {
           type: 'fun',
-          value: runGenerator(evaluateFunctionDefinition(ctx, exp)),
+          value: yield* evaluateFunctionDefinition(ctx, exp),
         };
       case 'call':
-        return runGenerator(evaluateFunctionCall(ctx, exp));
+        return yield* evaluateFunctionCall(ctx, exp);
       case 'musical_procedure':
         return {
           type: 'musical_event_source',
           value: evaluateMusicalProcedure(ctx, exp),
         };
     }
-  };
+  }
 
-  const evaluateStmt: (stmt: Statement) => void = stmt => {
+  function* evaluateStmt(stmt: Statement): EventGen<void> {
     switch (stmt.type) {
       case 'cmd':
         evaluateCmd(ctx, stmt);
@@ -930,17 +820,23 @@ export const createEvaluator: (
         // TODO: no need to outside of function scope
         break;
       default:
-        evaluateExpression(ctx, stmt);
+        yield* evaluateExpression(ctx, stmt);
         break;
     }
-  };
+  }
 
-  const evaluate: (program: Block) => void = program => {
-    program.statements.forEach(evaluateStmt);
+  function* evaluateProgram(program: Block): EventGen<void> {
+    for (const stmt of program.statements) {
+      yield* evaluateStmt(stmt);
+    }
+  }
+
+  const evaluateAndPlay: (program: Block) => void = program => {
+    runGenerator(evaluateProgram(program));
     sequencer.play();
   };
 
   return {
-    evaluate: evaluate,
+    evaluate: evaluateAndPlay,
   };
 };
