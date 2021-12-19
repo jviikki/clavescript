@@ -117,7 +117,12 @@ export type Expression =
   | Float
   | BooleanLiteral;
 
-export type Statement = BuiltInCommand | Expression;
+export type ReturnStmt = {
+  type: 'return';
+  value: Expression;
+};
+
+export type Statement = BuiltInCommand | Expression | ReturnStmt;
 
 export type Block = {
   type: 'block';
@@ -126,16 +131,16 @@ export type Block = {
 
 type BindingPower = [number, number];
 
-const getMusicalOperatorBindingPower: (op: string) => BindingPower = op => {
-  switch (op) {
-    case ':=:':
-      return [3, 4];
-    case ':+:':
-      return [1, 2];
-    default:
-      throw new Error(`Parse error: Unrecognized operator ${op}`);
-  }
-};
+// const getMusicalOperatorBindingPower: (op: string) => BindingPower = op => {
+//   switch (op) {
+//     case ':=:':
+//       return [3, 4];
+//     case ':+:':
+//       return [1, 2];
+//     default:
+//       throw new Error(`Parse error: Unrecognized operator ${op}`);
+//   }
+// };
 
 export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
   const parseInteger: () => Integer = () => {
@@ -236,53 +241,53 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     };
   };
 
-  const parseMusicalExpressionWithBP: (
-    minBP: number
-  ) => MusicalExpression = minBP => {
-    let lhs: MusicalExpression | null = null;
-    const token = tokenizer.peek();
-    switch (token.type) {
-      case TokenType.Punctuation:
-        if (token.value === '(') {
-          assertPunc('(');
-          lhs = parseMusicalExpressionWithBP(0);
-          assertPunc(')');
-          break;
-        } else if (token.value === '{') {
-          lhs = parseStepSequence();
-          break;
-        }
-        throw new Error(
-          `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
-        );
-      default:
-        throw new Error(
-          `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
-        );
-    }
+  // const parseMusicalExpressionWithBP: (
+  //   minBP: number
+  // ) => MusicalExpression = minBP => {
+  //   let lhs: MusicalExpression | null = null;
+  //   const token = tokenizer.peek();
+  //   switch (token.type) {
+  //     case TokenType.Punctuation:
+  //       if (token.value === '(') {
+  //         assertPunc('(');
+  //         lhs = parseMusicalExpressionWithBP(0);
+  //         assertPunc(')');
+  //         break;
+  //       } else if (token.value === '{') {
+  //         lhs = parseStepSequence();
+  //         break;
+  //       }
+  //       throw new Error(
+  //         `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
+  //       );
+  //     default:
+  //       throw new Error(
+  //         `Unexpected token on line ${tokenizer.line()} (column ${tokenizer.col()})`
+  //       );
+  //   }
+  //
+  //   // eslint-disable-next-line no-constant-condition
+  //   while (true) {
+  //     const token = tokenizer.peek();
+  //     if (token.type !== TokenType.Operator) break;
+  //     if (token.value !== ':+:' && token.value !== ':=:') break;
+  //     const [leftBP, rightBP] = getMusicalOperatorBindingPower(token.value);
+  //     if (leftBP < minBP) break;
+  //     tokenizer.next();
+  //     const rhs = parseMusicalExpressionWithBP(rightBP);
+  //     lhs = {
+  //       type: 'musical_binary',
+  //       operator: token.value,
+  //       left: lhs,
+  //       right: rhs,
+  //     };
+  //   }
+  //
+  //   return lhs;
+  // };
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const token = tokenizer.peek();
-      if (token.type !== TokenType.Operator) break;
-      if (token.value !== ':+:' && token.value !== ':=:') break;
-      const [leftBP, rightBP] = getMusicalOperatorBindingPower(token.value);
-      if (leftBP < minBP) break;
-      tokenizer.next();
-      const rhs = parseMusicalExpressionWithBP(rightBP);
-      lhs = {
-        type: 'musical_binary',
-        operator: token.value,
-        left: lhs,
-        right: rhs,
-      };
-    }
-
-    return lhs;
-  };
-
-  const parseMusicalExpression: () => MusicalExpression = () =>
-    parseMusicalExpressionWithBP(0);
+  // const parseMusicalExpression: () => MusicalExpression = () =>
+  //   parseMusicalExpressionWithBP(0);
 
   const parseIdentifier: () => Identifier = () => {
     const next = tokenizer.next();
@@ -364,16 +369,16 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     };
   };
 
-  const parseAssignmentToIdentifier: (
-    identifier: Identifier
-  ) => Assignment = identifier => {
-    assertOperator(':=');
-    return {
-      type: 'assignment',
-      left: identifier,
-      right: parseExpression(),
-    };
-  };
+  // const parseAssignmentToIdentifier: (
+  //   identifier: Identifier
+  // ) => Assignment = identifier => {
+  //   assertOperator(':=');
+  //   return {
+  //     type: 'assignment',
+  //     left: identifier,
+  //     right: parseExpression(),
+  //   };
+  // };
 
   const parseBuiltInCommandArg: () =>
     | MusicalExpression
@@ -416,10 +421,10 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     };
   };
 
-  const maybeCall: (parseExpr: () => Expression) => Expression = parseExpr => {
-    const expr = parseExpr();
-    return isPunc('(') ? parseCall(expr) : expr;
-  };
+  // const maybeCall: (parseExpr: () => Expression) => Expression = parseExpr => {
+  //   const expr = parseExpr();
+  //   return isPunc('(') ? parseCall(expr) : expr;
+  // };
 
   const parseCall: (expr: Expression) => FunctionCall = expr => ({
     type: 'call',
@@ -652,6 +657,14 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
   //   }
   // };
 
+  const parseReturnStatement: () => ReturnStmt = () => {
+    tokenizer.next();
+    return {
+      type: 'return',
+      value: parseExpression(),
+    };
+  };
+
   const parseStatement: () => Statement = () => {
     const next = tokenizer.peek();
     switch (next.type) {
@@ -659,6 +672,7 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
         // TODO: Maybe separate built-in commands and other keywords in lexer.
         if (next.value === 'fun' || next.value === 'step')
           return parseExpression();
+        else if (next.value === 'return') return parseReturnStatement();
         else return parseBuiltInCommand();
       default:
         return parseExpression();

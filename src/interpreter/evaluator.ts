@@ -1,5 +1,4 @@
 import {
-  Assignment,
   BuiltInCommand,
   Float,
   Identifier,
@@ -144,22 +143,22 @@ export const createEvaluator: (
     playUntil: 0,
   };
 
-  const evaluateAssignmentOld: (ctx: Context, exp: Assignment) => void = (
-    ctx,
-    exp
-  ) => {
-    ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
-  };
+  // const evaluateAssignmentOld: (ctx: Context, exp: Assignment) => void = (
+  //   ctx,
+  //   exp
+  // ) => {
+  //   ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
+  // };
 
-  const evaluateAssignmentExpression: (
-    ctx: Context,
-    exp: BinaryOperator
-  ) => void = (ctx, exp) => {
-    if (exp.operator !== ':=' || exp.left.type !== 'identifier')
-      throw Error('Assignment only allowed to an identifier');
-
-    ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
-  };
+  // const evaluateAssignmentExpression: (
+  //   ctx: Context,
+  //   exp: BinaryOperator
+  // ) => void = (ctx, exp) => {
+  //   if (exp.operator !== ':=' || exp.left.type !== 'identifier')
+  //     throw Error('Assignment only allowed to an identifier');
+  //
+  //   ctx.env.set(exp.left.name, evaluateAssignmentRightValue(ctx, exp.right));
+  // };
 
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,
@@ -260,7 +259,6 @@ export const createEvaluator: (
     ctx: Context,
     stmt: FunctionCall
   ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
-    console.log('evaluating function call');
     // TODO: accept all expressions
     if (stmt.func.type !== 'identifier') {
       throw Error('Function calls are implemented only for identifiers');
@@ -311,55 +309,55 @@ export const createEvaluator: (
   }
 
   // eslint-disable-next-line require-yield
-  function* evaluateAssignmentGen(
-    ctx: Context,
-    exp: Assignment
-  ): Generator<SequenceAndPlayheadPos, void, number> {
-    ctx.env.set(
-      exp.left.name,
-      yield* evaluateAssignmentRightValueGen(ctx, exp.right)
-    );
-  }
+  // function* evaluateAssignmentGen(
+  //   ctx: Context,
+  //   exp: Assignment
+  // ): Generator<SequenceAndPlayheadPos, void, number> {
+  //   ctx.env.set(
+  //     exp.left.name,
+  //     yield* evaluateAssignmentRightValueGen(ctx, exp.right)
+  //   );
+  // }
 
   // eslint-disable-next-line require-yield
-  function* evaluateAssignmentRightValueGen(
-    ctx: Context,
-    exp: Expression
-  ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
-    switch (exp.type) {
-      case 'binary_operator':
-        // TODO: Implement binary operator
-        throw Error('Binary operator not yet implemented');
-      case 'unary_operator':
-        // TODO: Implement unary operator
-        throw Error('Unary operator not yet implemented');
-      case 'identifier':
-        return evaluateIdentifier(ctx, exp);
-      case 'integer':
-        return evaluateInteger(exp);
-      case 'float':
-        return evaluateFloat(exp);
-      case 'boolean':
-        // TODO: Implement boolean literal
-        throw Error('Boolean literal not yet implemented');
-      case 'step_sequence':
-        return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      // case 'musical_binary':
-      //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      case 'musical_procedure':
-        return {
-          type: 'musical_event_source',
-          value: evaluateMusicalProcedure(ctx, exp),
-        };
-      case 'fun':
-        return {
-          type: 'fun',
-          value: yield* evaluateFunctionDefinition(ctx, exp),
-        };
-      case 'call':
-        throw Error('Evaluation of function call not yet implemented');
-    }
-  }
+  // function* evaluateAssignmentRightValueGen(
+  //   ctx: Context,
+  //   exp: Expression
+  // ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
+  //   switch (exp.type) {
+  //     case 'binary_operator':
+  //       // TODO: Implement binary operator
+  //       throw Error('Binary operator not yet implemented');
+  //     case 'unary_operator':
+  //       // TODO: Implement unary operator
+  //       throw Error('Unary operator not yet implemented');
+  //     case 'identifier':
+  //       return evaluateIdentifier(ctx, exp);
+  //     case 'integer':
+  //       return evaluateInteger(exp);
+  //     case 'float':
+  //       return evaluateFloat(exp);
+  //     case 'boolean':
+  //       // TODO: Implement boolean literal
+  //       throw Error('Boolean literal not yet implemented');
+  //     case 'step_sequence':
+  //       return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+  //     // case 'musical_binary':
+  //     //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+  //     case 'musical_procedure':
+  //       return {
+  //         type: 'musical_event_source',
+  //         value: evaluateMusicalProcedure(ctx, exp),
+  //       };
+  //     case 'fun':
+  //       return {
+  //         type: 'fun',
+  //         value: yield* evaluateFunctionDefinition(ctx, exp),
+  //       };
+  //     case 'call':
+  //       throw Error('Evaluation of function call not yet implemented');
+  //   }
+  // }
 
   function* evaluateStatement(
     ctx: Context,
@@ -455,44 +453,44 @@ export const createEvaluator: (
     };
   };
 
-  const evaluateAssignmentRightValue: (
-    ctx: Context,
-    exp: Expression
-  ) => VariableValue = (ctx, exp) => {
-    switch (exp.type) {
-      case 'unary_operator':
-        // TODO: Implement unary operator
-        throw Error('Unary operator not yet implemented');
-      case 'binary_operator':
-        // TODO: implement binary operator
-        throw Error('Binary operator not yet implemented');
-      case 'identifier':
-        return evaluateIdentifier(ctx, exp);
-      case 'integer':
-        return evaluateInteger(exp);
-      case 'float':
-        return evaluateFloat(exp);
-      case 'boolean':
-        // TODO: implement boolean literal
-        throw Error('Boolean literal not yet implemented');
-      case 'step_sequence':
-        return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      // case 'musical_binary':
-      //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
-      case 'musical_procedure':
-        return {
-          type: 'musical_event_source',
-          value: evaluateMusicalProcedure(ctx, exp),
-        };
-      case 'fun':
-        return {
-          type: 'fun',
-          value: runGenerator(evaluateFunctionDefinition(ctx, exp)),
-        };
-      case 'call':
-        throw new Error('Evaluation of function call is not implemented yet');
-    }
-  };
+  // const evaluateAssignmentRightValue: (
+  //   ctx: Context,
+  //   exp: Expression
+  // ) => VariableValue = (ctx, exp) => {
+  //   switch (exp.type) {
+  //     case 'unary_operator':
+  //       // TODO: Implement unary operator
+  //       throw Error('Unary operator not yet implemented');
+  //     case 'binary_operator':
+  //       // TODO: implement binary operator
+  //       throw Error('Binary operator not yet implemented');
+  //     case 'identifier':
+  //       return evaluateIdentifier(ctx, exp);
+  //     case 'integer':
+  //       return evaluateInteger(exp);
+  //     case 'float':
+  //       return evaluateFloat(exp);
+  //     case 'boolean':
+  //       // TODO: implement boolean literal
+  //       throw Error('Boolean literal not yet implemented');
+  //     case 'step_sequence':
+  //       return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+  //     // case 'musical_binary':
+  //     //   return {type: 'sequence', value: evaluateMusicalExpression(exp)};
+  //     case 'musical_procedure':
+  //       return {
+  //         type: 'musical_event_source',
+  //         value: evaluateMusicalProcedure(ctx, exp),
+  //       };
+  //     case 'fun':
+  //       return {
+  //         type: 'fun',
+  //         value: runGenerator(evaluateFunctionDefinition(ctx, exp)),
+  //       };
+  //     case 'call':
+  //       throw new Error('Evaluation of function call is not implemented yet');
+  //   }
+  // };
 
   const evaluateMusicalExpression: (
     exp: MusicalExpression
@@ -930,17 +928,22 @@ export const createEvaluator: (
     }
   };
 
+  const evaluateStmt: (stmt: Statement) => void = stmt => {
+    switch (stmt.type) {
+      case 'cmd':
+        evaluateCmd(ctx, stmt);
+        break;
+      case 'return':
+        // TODO: no need to outside of function scope
+        break;
+      default:
+        evaluateExpression(ctx, stmt);
+        break;
+    }
+  };
+
   const evaluate: (program: Block) => void = program => {
-    program.statements.forEach(stmt => {
-      switch (stmt.type) {
-        case 'cmd':
-          evaluateCmd(ctx, stmt);
-          break;
-        default:
-          console.log(evaluateExpression(ctx, stmt));
-          break;
-      }
-    });
+    program.statements.forEach(evaluateStmt);
     sequencer.play();
   };
 
