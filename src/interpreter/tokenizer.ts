@@ -37,7 +37,13 @@ type OperatorString = typeof operatorStrings[number];
 const commandStrings = ['loop', 'tempo', 'play', 'sleep'] as const;
 export type CommandString = typeof commandStrings[number];
 
-const keywordStrings = ['seq', 'fun', 'step', ...commandStrings] as const;
+const keywordStrings = [
+  'seq',
+  'fun',
+  'step',
+  'return',
+  ...commandStrings,
+] as const;
 export type KeywordString = typeof keywordStrings[number];
 
 export type EOFToken = {
