@@ -124,7 +124,9 @@ type SequenceAndPlayheadPos = {
   playheadPos: number;
 };
 
-function runGenerator<T>(gen: Generator<SequenceAndPlayheadPos, T, number>): T {
+type EventGen<T> = Generator<SequenceAndPlayheadPos, T, number>;
+
+function runGenerator<T>(gen: EventGen<T>): T {
   for (;;) {
     const val = gen.next(Number.MAX_VALUE);
     if (val.done) {
@@ -197,10 +199,7 @@ export const createEvaluator: (
   };
 
   // eslint-disable-next-line require-yield
-  function* evaluatePlay(
-    ctx: Context,
-    stmt: BuiltInCommand
-  ): Generator<SequenceAndPlayheadPos, void, number> {
+  function* evaluatePlay(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
     // if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
 
     const pitch = (() => {
@@ -231,10 +230,7 @@ export const createEvaluator: (
     });
   }
 
-  function* evaluateSleep(
-    ctx: Context,
-    stmt: BuiltInCommand
-  ): Generator<SequenceAndPlayheadPos, void, number> {
+  function* evaluateSleep(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
     ctx.playheadPosition += (() => {
       if (stmt.arg.type === 'identifier') {
         return evaluateIdentifierAsInteger(ctx, stmt.arg);
@@ -258,7 +254,7 @@ export const createEvaluator: (
   function* evaluateFunctionCall(
     ctx: Context,
     stmt: FunctionCall
-  ): Generator<SequenceAndPlayheadPos, VariableValue, number> {
+  ): EventGen<VariableValue> {
     // TODO: accept all expressions
     if (stmt.func.type !== 'identifier') {
       throw Error('Function calls are implemented only for identifiers');
@@ -303,7 +299,7 @@ export const createEvaluator: (
   function* evaluateFunctionDefinition(
     ctx: Context,
     stmt: FunctionDefinition
-  ): Generator<SequenceAndPlayheadPos, FunctionDefinition, number> {
+  ): EventGen<FunctionDefinition> {
     console.log('evaluating function definition');
     return stmt;
   }
@@ -359,10 +355,7 @@ export const createEvaluator: (
   //   }
   // }
 
-  function* evaluateStatement(
-    ctx: Context,
-    stmt: Statement
-  ): Generator<SequenceAndPlayheadPos, void, number> {
+  function* evaluateStatement(ctx: Context, stmt: Statement): EventGen<void> {
     if (stmt.type === 'cmd') {
       switch (stmt.name) {
         case 'play':
@@ -385,7 +378,7 @@ export const createEvaluator: (
   function* evaluateFunctionBody(
     ctx: Context,
     statements: Statement[]
-  ): Generator<SequenceAndPlayheadPos, void, number> {
+  ): EventGen<void> {
     for (const stmt of statements) {
       yield* evaluateStatement(ctx, stmt);
     }
@@ -397,7 +390,7 @@ export const createEvaluator: (
   ) => MusicalEventSource = (ctx, exp) => {
     function* evaluatorGenerator(
       ctx: Context
-    ): Generator<SequenceAndPlayheadPos, SequenceAndPlayheadPos, number> {
+    ): EventGen<SequenceAndPlayheadPos> {
       ctx.playUntil = yield {
         sequence: ctx.seq,
         playheadPos: ctx.playheadPosition,
