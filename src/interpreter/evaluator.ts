@@ -215,55 +215,45 @@ export const createEvaluator: (
 
   function* evaluateFunctionCall(
     ctx: Context,
-    stmt: FunctionCall
+    expr: FunctionCall
   ): EventGen<VariableValue> {
-    // TODO: accept all expressions
-    if (stmt.func.type !== 'identifier') {
-      throw Error('Function calls are implemented only for identifiers');
-    }
-    const func = ctx.env.get(stmt.func.name);
+    const func = yield* evaluateExpression(ctx, expr.func);
+
     if (func.type !== 'fun') {
       throw Error('Attempting to call a non-function');
     }
 
-    if (func.value.params.length !== stmt.args.length) {
+    if (func.value.params.length !== expr.args.length) {
       throw Error(
-        `Arguments provided: ${stmt.args.length}, expected: ${func.value.params.length}`
+        `Number of arguments provided: ${expr.args.length}, expected: ${func.value.params.length}`
       );
     }
 
     const oldEnv = ctx.env;
     ctx.env = ctx.env.extend();
-    // const newCtx: Context = {
-    //   ...ctx,
-    //   env: ctx.env.extend(),
-    // };
 
-    // TODO: accept all expressions. Now accepting only number literals.
-    for (let i = 0; i < stmt.args.length; i++) {
-      const arg = stmt.args[i];
-      switch (arg.type) {
-        case 'integer':
-          ctx.env.set(func.value.params[i], evaluateInteger(arg));
-          break;
-        case 'float':
-          ctx.env.set(func.value.params[i], evaluateFloat(arg));
-      }
+    for (let i = 0; i < expr.args.length; i++) {
+      ctx.env.set(
+        func.value.params[i],
+        yield* evaluateExpression(ctx, expr.args[i])
+      );
     }
 
-    // yield* evaluateFunctionBody(newCtx, func.value.body);
     yield* evaluateFunctionBody(ctx, func.value.body);
+
     ctx.env = oldEnv;
     return {type: 'nil'};
   }
 
   // eslint-disable-next-line require-yield
-  function* evaluateFunctionDefinition(
+  function evaluateFunctionDefinition(
     ctx: Context,
     stmt: FunctionDefinition
-  ): EventGen<FunctionDefinition> {
-    console.log('evaluating function definition');
-    return stmt;
+  ): VariableFunctionDefinition {
+    return {
+      type: 'fun',
+      value: stmt,
+    };
   }
 
   function* evaluateFunctionBody(
@@ -765,11 +755,7 @@ export const createEvaluator: (
       case 'binary_operator':
         return yield* evaluateBinaryOperator(ctx, exp);
       case 'fun':
-        // TODO: change function to return the correct value directly
-        return {
-          type: 'fun',
-          value: yield* evaluateFunctionDefinition(ctx, exp),
-        };
+        return evaluateFunctionDefinition(ctx, exp);
       case 'call':
         return yield* evaluateFunctionCall(ctx, exp);
       case 'musical_procedure':
