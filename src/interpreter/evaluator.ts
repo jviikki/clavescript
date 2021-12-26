@@ -206,15 +206,12 @@ export const createEvaluator: (
   }
 
   function* evaluateSleep(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
-    ctx.playheadPosition += (() => {
-      if (stmt.arg.type === 'identifier') {
-        return evaluateIdentifierAsInteger(ctx, stmt.arg);
-      } else if (stmt.arg.type === 'float' || stmt.arg.type === 'integer') {
-        return stmt.arg.value;
-      } else {
-        throw Error('Must be an integer or a float');
-      }
-    })();
+    const arg = yield* evaluateExpression(ctx, stmt.arg);
+
+    if (arg.type !== 'number')
+      throw Error('Sleep command only accepts numbers');
+
+    ctx.playheadPosition += arg.value;
 
     while (ctx.playheadPosition > ctx.playUntil) {
       ctx.playUntil = yield {
