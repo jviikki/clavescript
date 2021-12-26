@@ -183,24 +183,16 @@ export const createEvaluator: (
 
   // eslint-disable-next-line require-yield
   function* evaluatePlay(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
-    // if (stmt.arg.type !== 'integer') throw Error('Must be an integer');
-
-    const pitch = (() => {
-      if (stmt.arg.type === 'identifier') {
-        return evaluateIdentifierAsInteger(ctx, stmt.arg);
-      } else if (stmt.arg.type === 'integer') {
-        return stmt.arg.value;
-      } else {
-        throw Error('Must be an integer');
-      }
-    })();
+    const pitch = yield* evaluateExpression(ctx, stmt.arg);
+    if (pitch.type !== 'number')
+      throw Error('Play only accepts a number as argument');
 
     ctx.seq.push({
       type: 'NOTE',
       startTime: ctx.playheadPosition,
       duration: 0.25,
       volume: 64,
-      pitch: pitch,
+      pitch: pitch.value,
       instrument: 'audio',
     });
     ctx.seq.push({
@@ -208,7 +200,7 @@ export const createEvaluator: (
       startTime: ctx.playheadPosition,
       duration: 0.25,
       volume: 64,
-      pitch: pitch,
+      pitch: pitch.value,
       instrument: 'midi',
     });
   }
