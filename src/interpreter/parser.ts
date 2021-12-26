@@ -55,7 +55,7 @@ export type MusicalProcedure = {
 export type BuiltInCommand = {
   type: 'cmd';
   name: CommandString;
-  arg: MusicalExpression | Identifier | Integer | Float;
+  arg: Expression;
 };
 
 export type FunctionDefinition = {
@@ -289,24 +289,6 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     };
   };
 
-  const parseBuiltInCommandArg: () =>
-    | MusicalExpression
-    | Identifier
-    | Integer
-    | Float = () => {
-    const token = tokenizer.peek();
-    switch (token.type) {
-      case TokenType.Identifier:
-        return parseIdentifier();
-      case TokenType.Integer:
-        return parseInteger();
-      case TokenType.Float:
-        return parseFloat();
-      default:
-        throw Error('Unable to parse the build in command argument');
-    }
-  };
-
   // TODO: make this specific to the built-in command
   const parseBuiltInCommand: () => BuiltInCommand = () => {
     const token = tokenizer.next();
@@ -326,7 +308,7 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     return {
       type: 'cmd',
       name: token.value,
-      arg: parseBuiltInCommandArg(),
+      arg: parseExpression(),
     };
   };
 
