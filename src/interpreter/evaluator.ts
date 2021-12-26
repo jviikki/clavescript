@@ -213,7 +213,6 @@ export const createEvaluator: (
     }
   }
 
-  // eslint-disable-next-line require-yield
   function* evaluateFunctionCall(
     ctx: Context,
     stmt: FunctionCall
