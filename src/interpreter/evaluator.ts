@@ -160,15 +160,6 @@ export const createEvaluator: (
     value: exp.value,
   });
 
-  const evaluateIdentifierAsInteger: (
-    ctx: Context,
-    exp: Identifier
-  ) => number = (ctx, exp) => {
-    const id = evaluateIdentifier(ctx, exp);
-    if (id.type !== 'number') throw Error('Must be a numerical value');
-    return id.value;
-  };
-
   const evaluateIdentifierAsSequence: (
     ctx: Context,
     exp: Identifier
@@ -449,6 +440,14 @@ export const createEvaluator: (
     });
   };
 
+  function* evaluateTempo(ctx: Context, exp: BuiltInCommand): EventGen<void> {
+    const arg = yield* evaluateExpression(ctx, exp.arg);
+    if (arg.type !== 'number')
+      throw Error('Tempo only accepts numbers as argument');
+
+    sequencer.setTempo(arg.value);
+  }
+
   function* evaluateCmd(ctx: Context, exp: BuiltInCommand): EventGen<void> {
     switch (exp.name) {
       case 'loop':
@@ -462,13 +461,7 @@ export const createEvaluator: (
         }
         break;
       case 'tempo':
-        if (exp.arg.type === 'identifier') {
-          sequencer.setTempo(evaluateIdentifierAsInteger(ctx, exp.arg));
-        } else if (exp.arg.type === 'integer') {
-          sequencer.setTempo(evaluateInteger(exp.arg).value);
-        } else {
-          throw Error('Tempo must be an integer');
-        }
+        yield* evaluateTempo(ctx, exp);
         break;
       case 'play':
         yield* evaluatePlay(ctx, exp);
