@@ -287,32 +287,12 @@ export const createEvaluator: (
     return stmt;
   }
 
-  function* evaluateStatement(ctx: Context, stmt: Statement): EventGen<void> {
-    if (stmt.type === 'cmd') {
-      switch (stmt.name) {
-        case 'play':
-          yield* evaluatePlay(ctx, stmt);
-          break;
-        case 'sleep':
-          yield* evaluateSleep(ctx, stmt);
-          break;
-        default:
-          break;
-      }
-    } else if (stmt.type === 'call') {
-      yield* evaluateFunctionCall(ctx, stmt);
-    }
-    // else if (stmt.type === 'assignment') {
-    //   yield* evaluateAssignmentGen(ctx, stmt);
-    // }
-  }
-
   function* evaluateFunctionBody(
     ctx: Context,
     statements: Statement[]
   ): EventGen<void> {
     for (const stmt of statements) {
-      yield* evaluateStatement(ctx, stmt);
+      yield* evaluateStmt(ctx, stmt);
     }
   }
 
@@ -328,7 +308,7 @@ export const createEvaluator: (
         playheadPos: ctx.playheadPosition,
       };
 
-      yield* evaluateFunctionBody(ctx, exp.statements);
+      yield* evaluateProgram(ctx, exp);
 
       return {
         sequence: ctx.seq,
@@ -480,7 +460,7 @@ export const createEvaluator: (
     });
   };
 
-  function evaluateCmd(ctx: Context, exp: BuiltInCommand): void {
+  function* evaluateCmd(ctx: Context, exp: BuiltInCommand): EventGen<void> {
     switch (exp.name) {
       case 'loop':
         if (exp.arg.type === 'identifier') {
@@ -501,6 +481,14 @@ export const createEvaluator: (
           throw Error('Tempo must be an integer');
         }
         break;
+      case 'play':
+        yield* evaluatePlay(ctx, exp);
+        break;
+      case 'sleep':
+        yield* evaluateSleep(ctx, exp);
+        break;
+      default:
+        throw Error('Unrecognized statement');
     }
   }
 
@@ -811,10 +799,10 @@ export const createEvaluator: (
     }
   }
 
-  function* evaluateStmt(stmt: Statement): EventGen<void> {
+  function* evaluateStmt(ctx: Context, stmt: Statement): EventGen<void> {
     switch (stmt.type) {
       case 'cmd':
-        evaluateCmd(ctx, stmt);
+        yield* evaluateCmd(ctx, stmt);
         break;
       case 'return':
         // TODO: no need to outside of function scope
@@ -825,14 +813,17 @@ export const createEvaluator: (
     }
   }
 
-  function* evaluateProgram(program: Block): EventGen<void> {
+  function* evaluateProgram(
+    ctx: Context,
+    program: Block | MusicalProcedure
+  ): EventGen<void> {
     for (const stmt of program.statements) {
-      yield* evaluateStmt(stmt);
+      yield* evaluateStmt(ctx, stmt);
     }
   }
 
   const evaluateAndPlay: (program: Block) => void = program => {
-    runGenerator(evaluateProgram(program));
+    runGenerator(evaluateProgram(ctx, program));
     sequencer.play();
   };
 
