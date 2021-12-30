@@ -1,4 +1,10 @@
-import {CommandString, Tokenizer, TokenType} from './tokenizer';
+import {
+  CommandString,
+  Token,
+  Tokenizer,
+  TokenizerError,
+  TokenType,
+} from './tokenizer';
 
 export type Integer = {
   type: 'integer';
@@ -275,9 +281,12 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
 
   const parseMusicalProcedure: () => MusicalProcedure = () => {
     assertSeq();
+    assertPunc('{');
+    const statements = parseBlockStatements();
+    assertPunc('}');
     return {
       type: 'musical_procedure',
-      statements: parseDelimitedList('{', '}', ';', parseStatement),
+      statements: statements,
     };
   };
 
@@ -328,10 +337,12 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         `Parse error: Expected a command on line ${tokenizer.line()} (column ${tokenizer.col()})`
       );
     }
+    const expr = parseExpression();
+    assertPunc(';');
     return {
       type: 'cmd',
       name: token.value,
-      arg: parseExpression(),
+      arg: expr,
     };
   };
 
@@ -381,7 +392,9 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
       ',',
       () => parseIdentifier().name
     );
-    const body = parseDelimitedList('{', '}', ';', parseStatement);
+    assertPunc('{');
+    const body = parseBlockStatements();
+    assertPunc('}');
     return {
       type: 'fun',
       params: params,
@@ -551,9 +564,11 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
 
   const parseReturnStatement: () => ReturnStmt = () => {
     tokenizer.next();
+    const expr = parseExpression();
+    assertPunc(';');
     return {
       type: 'return',
-      value: parseExpression(),
+      value: expr,
     };
   };
 
@@ -567,6 +582,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     const next = tokenizer.peek();
     let elseBlock: Block | Statement | undefined = undefined;
     if (next.type === TokenType.Keyword && next.value === 'else') {
+      tokenizer.next();
       elseBlock = parseBlockOrStmt();
     }
 
@@ -578,35 +594,53 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     };
   };
 
+  const parseExpressionStmt: () => Expression = () => {
+    const expr = parseExpression();
+    assertPunc(';');
+    return expr;
+  };
+
   const parseStatement: () => Statement = () => {
     const next = tokenizer.peek();
     switch (next.type) {
       case TokenType.Keyword:
         if (next.value === 'fun' || next.value === 'step')
-          return parseExpression();
+          return parseExpressionStmt();
         else if (next.value === 'return') return parseReturnStatement();
         else if (next.value === 'if') return parseIfStatement();
         // else if (next.value === 'while') return parseWhileStatement();
         // else if (next.value === 'for') return parseForStatement();
         else return parseBuiltInCommand();
       default:
-        return parseExpression();
+        return parseExpressionStmt();
     }
   };
 
-  const parseStatements: () => Statement[] = () => {
+  const parseStatementsUntil: (
+    predicate: (nextToken: Token | TokenizerError) => boolean
+  ) => Statement[] = predicate => {
     const statements: Statement[] = [];
 
     for (;;) {
       const next = tokenizer.peek();
 
-      if (next.type === TokenType.EOF) {
+      if (predicate(next)) {
         return statements;
       }
 
       statements.push(parseStatement());
-      assertPunc(';');
     }
+  };
+
+  const parseProgramStatements: () => Statement[] = () => {
+    return parseStatementsUntil(nextToken => nextToken.type === TokenType.EOF);
+  };
+
+  const parseBlockStatements: () => Statement[] = () => {
+    return parseStatementsUntil(
+      nextToken =>
+        nextToken.type === TokenType.Punctuation && nextToken.value === '}'
+    );
   };
 
   const parseBlockOrStmt: () => Block | Statement = () => {
@@ -618,15 +652,21 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     }
   };
 
-  const parseBlock: () => Block = () => ({
-    type: 'block',
-    statements: parseDelimitedList('{', '}', ';', parseStatement),
-  });
+  const parseBlock: () => Block = () => {
+    assertPunc('{');
+    const statements = parseBlockStatements();
+    assertPunc('}');
+
+    return {
+      type: 'block',
+      statements: statements,
+    };
+  };
 
   const parseProgram: () => Program = () => {
     return {
       type: 'program',
-      statements: parseStatements(),
+      statements: parseProgramStatements(),
     };
   };
 
