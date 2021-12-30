@@ -1,6 +1,6 @@
 import {createTokenizer} from './tokenizer';
 import {createInputStream} from './input-stream';
-import {parse, Block} from './parser';
+import {parse, Program} from './parser';
 
 describe('parser', () => {
   it('parses a program successfully', () => {
@@ -31,8 +31,8 @@ describe('parser', () => {
       '\n' +
       'loop pattern; # start looping the pattern';
 
-    const expectedOutput: Block = {
-      type: 'block',
+    const expectedOutput: Program = {
+      type: 'program',
       statements: [
         {
           type: 'cmd',

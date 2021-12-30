@@ -42,6 +42,10 @@ const keywordStrings = [
   'fun',
   'step',
   'return',
+  'if',
+  'else',
+  'while',
+  'for',
   ...commandStrings,
 ] as const;
 export type KeywordString = typeof keywordStrings[number];
