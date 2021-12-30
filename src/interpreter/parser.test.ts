@@ -429,4 +429,225 @@ describe('parser', () => {
 
     expect(output).toEqual(expectedOutput);
   });
+
+  it('parses a program with function call and if statement', () => {
+    const input =
+      'tempo 100;\n' +
+      '\n' +
+      'x := 30;\n' +
+      '\n' +
+      'seqfoo := seq {\n' +
+      '  (fun (x, y) {\n' +
+      '    play x; sleep y;\n' +
+      '  })(x := x + 3, 0.2);\n' +
+      '  if (x >= 78) {\n' +
+      '      x := 30;\n' +
+      '  } else if (1 == 2) x := 44;\n' +
+      '  else {\n' +
+      '    # x := 35;\n' +
+      '    play 3 * (15 - 5);\n' +
+      '    sleep 0.2;\n' +
+      '  }\n' +
+      '};\n' +
+      '\n' +
+      'loop seqfoo;';
+
+    const expectedOutput: Program = {
+      type: 'program',
+      statements: [
+        {
+          type: 'cmd',
+          name: 'tempo',
+          arg: {
+            type: 'integer',
+            value: 100,
+          },
+        },
+        {
+          type: 'binary_operator',
+          operator: ':=',
+          left: {
+            type: 'identifier',
+            name: 'x',
+          },
+          right: {
+            type: 'integer',
+            value: 30,
+          },
+        },
+        {
+          type: 'binary_operator',
+          operator: ':=',
+          left: {
+            type: 'identifier',
+            name: 'seqfoo',
+          },
+          right: {
+            type: 'musical_procedure',
+            statements: [
+              {
+                type: 'call',
+                func: {
+                  type: 'fun',
+                  params: ['x', 'y'],
+                  body: [
+                    {
+                      type: 'cmd',
+                      name: 'play',
+                      arg: {
+                        type: 'identifier',
+                        name: 'x',
+                      },
+                    },
+                    {
+                      type: 'cmd',
+                      name: 'sleep',
+                      arg: {
+                        type: 'identifier',
+                        name: 'y',
+                      },
+                    },
+                  ],
+                },
+                args: [
+                  {
+                    type: 'binary_operator',
+                    operator: ':=',
+                    left: {
+                      type: 'identifier',
+                      name: 'x',
+                    },
+                    right: {
+                      type: 'binary_operator',
+                      operator: '+',
+                      left: {
+                        type: 'identifier',
+                        name: 'x',
+                      },
+                      right: {
+                        type: 'integer',
+                        value: 3,
+                      },
+                    },
+                  },
+                  {
+                    type: 'float',
+                    value: 0.2,
+                  },
+                ],
+              },
+              {
+                type: 'if',
+                condition: {
+                  type: 'binary_operator',
+                  operator: '>=',
+                  left: {
+                    type: 'identifier',
+                    name: 'x',
+                  },
+                  right: {
+                    type: 'integer',
+                    value: 78,
+                  },
+                },
+                body: {
+                  type: 'block',
+                  statements: [
+                    {
+                      type: 'binary_operator',
+                      operator: ':=',
+                      left: {
+                        type: 'identifier',
+                        name: 'x',
+                      },
+                      right: {
+                        type: 'integer',
+                        value: 30,
+                      },
+                    },
+                  ],
+                },
+                else: {
+                  type: 'if',
+                  condition: {
+                    type: 'binary_operator',
+                    operator: '==',
+                    left: {
+                      type: 'integer',
+                      value: 1,
+                    },
+                    right: {
+                      type: 'integer',
+                      value: 2,
+                    },
+                  },
+                  body: {
+                    type: 'binary_operator',
+                    operator: ':=',
+                    left: {
+                      type: 'identifier',
+                      name: 'x',
+                    },
+                    right: {
+                      type: 'integer',
+                      value: 44,
+                    },
+                  },
+                  else: {
+                    type: 'block',
+                    statements: [
+                      {
+                        type: 'cmd',
+                        name: 'play',
+                        arg: {
+                          type: 'binary_operator',
+                          operator: '*',
+                          left: {
+                            type: 'integer',
+                            value: 3,
+                          },
+                          right: {
+                            type: 'binary_operator',
+                            operator: '-',
+                            left: {
+                              type: 'integer',
+                              value: 15,
+                            },
+                            right: {
+                              type: 'integer',
+                              value: 5,
+                            },
+                          },
+                        },
+                      },
+                      {
+                        type: 'cmd',
+                        name: 'sleep',
+                        arg: {
+                          type: 'float',
+                          value: 0.2,
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+        {
+          type: 'cmd',
+          name: 'loop',
+          arg: {
+            type: 'identifier',
+            name: 'seqfoo',
+          },
+        },
+      ],
+    };
+
+    const output = parse(createTokenizer(createInputStream(input)));
+
+    expect(output).toEqual(expectedOutput);
+  });
 });
