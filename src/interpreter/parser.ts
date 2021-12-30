@@ -121,16 +121,39 @@ export type ReturnStmt = {
   value: Expression;
 };
 
-export type Statement = BuiltInCommand | Expression | ReturnStmt;
+export type IfStmt = {
+  type: 'if';
+  condition: Expression;
+  body: Block | Statement;
+  else: Block | Statement | undefined;
+};
+
+export type WhileStmt = {
+  type: 'while';
+  body: Block;
+};
+
+export type Statement =
+  | BuiltInCommand
+  | Expression
+  | ReturnStmt
+  | IfStmt
+  | WhileStmt
+  | Block;
 
 export type Block = {
   type: 'block';
   statements: Statement[];
 };
 
+export type Program = {
+  type: 'program';
+  statements: Statement[];
+};
+
 type BindingPower = [number, number];
 
-export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
+export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   const parseInteger: () => Integer = () => {
     const next = tokenizer.next();
     if (next.type !== TokenType.Integer)
@@ -534,14 +557,37 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     };
   };
 
+  const parseIfStatement: () => IfStmt = () => {
+    tokenizer.next(); // if keyword
+    assertPunc('(');
+    const condition = parseExpression();
+    assertPunc(')');
+    const body = parseBlockOrStmt();
+
+    const next = tokenizer.peek();
+    let elseBlock: Block | Statement | undefined = undefined;
+    if (next.type === TokenType.Keyword && next.value === 'else') {
+      elseBlock = parseBlockOrStmt();
+    }
+
+    return {
+      type: 'if',
+      condition: condition,
+      body: body,
+      else: elseBlock,
+    };
+  };
+
   const parseStatement: () => Statement = () => {
     const next = tokenizer.peek();
     switch (next.type) {
       case TokenType.Keyword:
-        // TODO: Maybe separate built-in commands and other keywords in lexer.
         if (next.value === 'fun' || next.value === 'step')
           return parseExpression();
         else if (next.value === 'return') return parseReturnStatement();
+        else if (next.value === 'if') return parseIfStatement();
+        // else if (next.value === 'while') return parseWhileStatement();
+        // else if (next.value === 'for') return parseForStatement();
         else return parseBuiltInCommand();
       default:
         return parseExpression();
@@ -563,12 +609,26 @@ export const parse: (tokenizer: Tokenizer) => Block = tokenizer => {
     }
   };
 
-  const parseBlock: () => Block = () => {
+  const parseBlockOrStmt: () => Block | Statement = () => {
+    const token = tokenizer.peek();
+    if (token.type === TokenType.Punctuation && token.value === '{') {
+      return parseBlock();
+    } else {
+      return parseStatement();
+    }
+  };
+
+  const parseBlock: () => Block = () => ({
+    type: 'block',
+    statements: parseDelimitedList('{', '}', ';', parseStatement),
+  });
+
+  const parseProgram: () => Program = () => {
     return {
-      type: 'block',
+      type: 'program',
       statements: parseStatements(),
     };
   };
 
-  return parseBlock();
+  return parseProgram();
 };

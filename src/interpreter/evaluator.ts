@@ -15,6 +15,8 @@ import {
   BinaryOperator,
   UnaryOperator,
   BooleanLiteral,
+  Program,
+  IfStmt,
 } from './parser';
 import {
   EventSourceSequence,
@@ -25,7 +27,7 @@ import {
 } from '../music/sequencer';
 
 export type Evaluator = {
-  evaluate(p: Block): void;
+  evaluate(p: Program): void;
 };
 
 type VariableNumber = {type: 'number'; value: number};
@@ -277,7 +279,7 @@ export const createEvaluator: (
         playheadPos: ctx.playheadPosition,
       };
 
-      yield* evaluateProgram(ctx, exp);
+      yield* evaluateBlock(ctx, exp);
 
       return {
         sequence: ctx.seq,
@@ -766,6 +768,21 @@ export const createEvaluator: (
     }
   }
 
+  function* evaluateIfStmt(ctx: Context, stmt: IfStmt): EventGen<void> {
+    const cond = yield* evaluateExpression(ctx, stmt.condition);
+    if (cond.type !== 'boolean') {
+      throw Error('The condition of statement must evaluate to a boolean');
+    }
+
+    if (cond.value) {
+      return yield* evaluateStmt(ctx, stmt.body);
+    }
+
+    if (stmt.else) {
+      return yield* evaluateStmt(ctx, stmt.else);
+    }
+  }
+
   function* evaluateStmt(ctx: Context, stmt: Statement): EventGen<void> {
     switch (stmt.type) {
       case 'cmd':
@@ -774,23 +791,32 @@ export const createEvaluator: (
       case 'return':
         // TODO: no need to outside of function scope
         break;
+      case 'if':
+        yield* evaluateIfStmt(ctx, stmt);
+        break;
+      case 'while':
+        // TODO: evaluate while statement
+        break;
+      case 'block':
+        yield* evaluateBlock(ctx, stmt);
+        break;
       default:
         yield* evaluateExpression(ctx, stmt);
         break;
     }
   }
 
-  function* evaluateProgram(
+  function* evaluateBlock(
     ctx: Context,
-    program: Block | MusicalProcedure
+    program: Program | Block | MusicalProcedure
   ): EventGen<void> {
     for (const stmt of program.statements) {
       yield* evaluateStmt(ctx, stmt);
     }
   }
 
-  const evaluateAndPlay: (program: Block) => void = program => {
-    runGenerator(evaluateProgram(ctx, program));
+  const evaluateAndPlay: (program: Program) => void = program => {
+    runGenerator(evaluateBlock(ctx, program));
     sequencer.play();
   };
 
