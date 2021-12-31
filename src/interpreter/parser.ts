@@ -136,7 +136,8 @@ export type IfStmt = {
 
 export type WhileStmt = {
   type: 'while';
-  body: Block;
+  condition: Expression;
+  body: Block | Statement;
 };
 
 export type Statement =
@@ -594,6 +595,20 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     };
   };
 
+  const parseWhileStatement: () => WhileStmt = () => {
+    tokenizer.next(); // while keyword
+    assertPunc('(');
+    const condition = parseExpression();
+    assertPunc(')');
+    const body = parseBlockOrStmt();
+
+    return {
+      type: 'while',
+      condition: condition,
+      body: body,
+    };
+  };
+
   const parseExpressionStmt: () => Expression = () => {
     const expr = parseExpression();
     assertPunc(';');
@@ -608,7 +623,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
           return parseExpressionStmt();
         else if (next.value === 'return') return parseReturnStatement();
         else if (next.value === 'if') return parseIfStatement();
-        // else if (next.value === 'while') return parseWhileStatement();
+        else if (next.value === 'while') return parseWhileStatement();
         // else if (next.value === 'for') return parseForStatement();
         else return parseBuiltInCommand();
       default:
