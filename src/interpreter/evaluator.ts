@@ -17,6 +17,7 @@ import {
   BooleanLiteral,
   Program,
   IfStmt,
+  WhileStmt,
 } from './parser';
 import {
   EventSourceSequence,
@@ -771,7 +772,7 @@ export const createEvaluator: (
   function* evaluateIfStmt(ctx: Context, stmt: IfStmt): EventGen<void> {
     const cond = yield* evaluateExpression(ctx, stmt.condition);
     if (cond.type !== 'boolean') {
-      throw Error('The condition of statement must evaluate to a boolean');
+      throw Error('The condition of if statement must evaluate to a boolean');
     }
 
     if (cond.value) {
@@ -780,6 +781,24 @@ export const createEvaluator: (
 
     if (stmt.else) {
       return yield* evaluateStmt(ctx, stmt.else);
+    }
+  }
+
+  function* evaluateWhileStmt(ctx: Context, stmt: WhileStmt): EventGen<void> {
+    function* shouldContinue(): EventGen<boolean> {
+      const cond = yield* evaluateExpression(ctx, stmt.condition);
+
+      if (cond.type !== 'boolean') {
+        throw Error(
+          'The condition of while statement must evaluate to a boolean'
+        );
+      }
+
+      return cond.value;
+    }
+
+    while (yield* shouldContinue()) {
+      yield* evaluateStmt(ctx, stmt.body);
     }
   }
 
@@ -795,7 +814,7 @@ export const createEvaluator: (
         yield* evaluateIfStmt(ctx, stmt);
         break;
       case 'while':
-        // TODO: evaluate while statement
+        yield* evaluateWhileStmt(ctx, stmt);
         break;
       case 'block':
         yield* evaluateBlock(ctx, stmt);

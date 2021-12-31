@@ -650,4 +650,129 @@ describe('parser', () => {
 
     expect(output).toEqual(expectedOutput);
   });
+
+  it('Parse while loop properly', () => {
+    const input =
+      'x := 30;\n' +
+      'seqfoo := seq { \n' +
+      '  while (x < 85) {\n' +
+      '    play x;\n' +
+      '    sleep 0.2;\n' +
+      '    x := x + 3;\n' +
+      '  }\n' +
+      '  x := 30;\n' +
+      '};\n' +
+      'loop seqfoo;';
+
+    const expectedOutput: Program = {
+      type: 'program',
+      statements: [
+        {
+          type: 'binary_operator',
+          operator: ':=',
+          left: {
+            type: 'identifier',
+            name: 'x',
+          },
+          right: {
+            type: 'integer',
+            value: 30,
+          },
+        },
+        {
+          type: 'binary_operator',
+          operator: ':=',
+          left: {
+            type: 'identifier',
+            name: 'seqfoo',
+          },
+          right: {
+            type: 'musical_procedure',
+            statements: [
+              {
+                type: 'while',
+                condition: {
+                  type: 'binary_operator',
+                  operator: '<',
+                  left: {
+                    type: 'identifier',
+                    name: 'x',
+                  },
+                  right: {
+                    type: 'integer',
+                    value: 85,
+                  },
+                },
+                body: {
+                  type: 'block',
+                  statements: [
+                    {
+                      type: 'cmd',
+                      name: 'play',
+                      arg: {
+                        type: 'identifier',
+                        name: 'x',
+                      },
+                    },
+                    {
+                      type: 'cmd',
+                      name: 'sleep',
+                      arg: {
+                        type: 'float',
+                        value: 0.2,
+                      },
+                    },
+                    {
+                      type: 'binary_operator',
+                      operator: ':=',
+                      left: {
+                        type: 'identifier',
+                        name: 'x',
+                      },
+                      right: {
+                        type: 'binary_operator',
+                        operator: '+',
+                        left: {
+                          type: 'identifier',
+                          name: 'x',
+                        },
+                        right: {
+                          type: 'integer',
+                          value: 3,
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+              {
+                type: 'binary_operator',
+                operator: ':=',
+                left: {
+                  type: 'identifier',
+                  name: 'x',
+                },
+                right: {
+                  type: 'integer',
+                  value: 30,
+                },
+              },
+            ],
+          },
+        },
+        {
+          type: 'cmd',
+          name: 'loop',
+          arg: {
+            type: 'identifier',
+            name: 'seqfoo',
+          },
+        },
+      ],
+    };
+
+    const output = parse(createTokenizer(createInputStream(input)));
+
+    expect(output).toEqual(expectedOutput);
+  });
 });
