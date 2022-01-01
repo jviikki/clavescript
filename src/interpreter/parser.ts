@@ -130,14 +130,14 @@ export type ReturnStmt = {
 export type IfStmt = {
   type: 'if';
   condition: Expression;
-  body: Block | Statement;
-  else: Block | Statement | undefined;
+  body: Statement;
+  else: Statement | undefined;
 };
 
 export type WhileStmt = {
   type: 'while';
   condition: Expression;
-  body: Block | Statement;
+  body: Statement;
 };
 
 export type Statement =
@@ -578,13 +578,13 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     assertPunc('(');
     const condition = parseExpression();
     assertPunc(')');
-    const body = parseBlockOrStmt();
+    const body = parseStatement();
 
     const next = tokenizer.peek();
-    let elseBlock: Block | Statement | undefined = undefined;
+    let elseBlock: Statement | undefined = undefined;
     if (next.type === TokenType.Keyword && next.value === 'else') {
       tokenizer.next();
-      elseBlock = parseBlockOrStmt();
+      elseBlock = parseStatement();
     }
 
     return {
@@ -600,7 +600,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     assertPunc('(');
     const condition = parseExpression();
     assertPunc(')');
-    const body = parseBlockOrStmt();
+    const body = parseStatement();
 
     return {
       type: 'while',
@@ -618,6 +618,9 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
   const parseStatement: () => Statement = () => {
     const next = tokenizer.peek();
     switch (next.type) {
+      case TokenType.Punctuation:
+        if (next.value === '{') return parseBlock();
+        else return parseExpressionStmt();
       case TokenType.Keyword:
         if (next.value === 'fun' || next.value === 'step')
           return parseExpressionStmt();
@@ -656,15 +659,6 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
       nextToken =>
         nextToken.type === TokenType.Punctuation && nextToken.value === '}'
     );
-  };
-
-  const parseBlockOrStmt: () => Block | Statement = () => {
-    const token = tokenizer.peek();
-    if (token.type === TokenType.Punctuation && token.value === '{') {
-      return parseBlock();
-    } else {
-      return parseStatement();
-    }
   };
 
   const parseBlock: () => Block = () => {
