@@ -609,6 +609,57 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     };
   };
 
+  const parseForStatement: () => Block = () => {
+    tokenizer.next(); // for keyword
+
+    assertPunc('(');
+
+    let nextToken = tokenizer.peek();
+    let initializer: Expression | undefined = undefined;
+    if (nextToken.type === TokenType.Punctuation && nextToken.value === ';') {
+      tokenizer.next();
+    } else {
+      initializer = parseExpressionStmt();
+    }
+
+    nextToken = tokenizer.peek();
+    let condition: Expression = {type: 'boolean', value: true};
+    if (nextToken.type === TokenType.Punctuation && nextToken.value === ';') {
+      tokenizer.next();
+    } else {
+      condition = parseExpressionStmt();
+    }
+
+    nextToken = tokenizer.peek();
+    let increment: Expression | undefined = undefined;
+    if (nextToken.type !== TokenType.Punctuation || nextToken.value !== ')') {
+      increment = parseExpression();
+    }
+
+    assertPunc(')');
+
+    const body = parseStatement();
+    const bodyBlock: Block =
+      body.type === 'block' ? body : {type: 'block', statements: [body]};
+
+    const whileStmt: WhileStmt = {
+      type: 'while',
+      condition: condition,
+      body:
+        increment !== undefined
+          ? {...bodyBlock, statements: [...bodyBlock.statements, increment]}
+          : bodyBlock,
+    };
+
+    const statements: Statement[] =
+      initializer !== undefined ? [initializer, whileStmt] : [whileStmt];
+
+    return {
+      type: 'block',
+      statements: statements,
+    };
+  };
+
   const parseExpressionStmt: () => Expression = () => {
     const expr = parseExpression();
     assertPunc(';');
@@ -627,7 +678,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         else if (next.value === 'return') return parseReturnStatement();
         else if (next.value === 'if') return parseIfStatement();
         else if (next.value === 'while') return parseWhileStatement();
-        // else if (next.value === 'for') return parseForStatement();
+        else if (next.value === 'for') return parseForStatement();
         else return parseBuiltInCommand();
       default:
         return parseExpressionStmt();
