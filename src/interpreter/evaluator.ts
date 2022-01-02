@@ -18,6 +18,7 @@ import {
   Program,
   IfStmt,
   WhileStmt,
+  ReturnStmt,
 } from './parser';
 import {
   EventSourceSequence,
@@ -141,6 +142,14 @@ function runGenerator<T>(gen: EventGen<T>): T {
 export const createEvaluator: (
   sequencer: Sequencer
 ) => Evaluator = sequencer => {
+  class ReturnValue {
+    value: VariableValue;
+
+    constructor(value: VariableValue) {
+      this.value = value;
+    }
+  }
+
   const ctx: Context = {
     env: createEnvironment(),
     seq: [],
@@ -242,7 +251,16 @@ export const createEvaluator: (
       );
     }
 
-    yield* evaluateFunctionBody(ctx, func.value.body);
+    try {
+      yield* evaluateFunctionBody(ctx, func.value.body);
+    } catch (ex) {
+      if (ex instanceof ReturnValue) {
+        ctx.env = oldEnv;
+        return ex.value;
+      } else {
+        throw ex;
+      }
+    }
 
     ctx.env = oldEnv;
     return {type: 'nil'};
@@ -802,13 +820,17 @@ export const createEvaluator: (
     }
   }
 
+  function* evaluateReturnStmt(ctx: Context, stmt: ReturnStmt): EventGen<void> {
+    throw new ReturnValue(yield* evaluateExpression(ctx, stmt.value));
+  }
+
   function* evaluateStmt(ctx: Context, stmt: Statement): EventGen<void> {
     switch (stmt.type) {
       case 'cmd':
         yield* evaluateCmd(ctx, stmt);
         break;
       case 'return':
-        // TODO: no need to outside of function scope
+        yield* evaluateReturnStmt(ctx, stmt);
         break;
       case 'if':
         yield* evaluateIfStmt(ctx, stmt);
