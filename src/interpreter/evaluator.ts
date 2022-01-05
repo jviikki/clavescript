@@ -784,6 +784,12 @@ export const createEvaluator: (
           type: 'musical_event_source',
           value: evaluateMusicalProcedure(ctx, exp),
         };
+      case 'array_literal':
+        // TODO: evaluate array literal
+        return {type: 'nil'};
+      case 'index':
+        // TODO: evaluate array index
+        return {type: 'nil'};
     }
   }
 
