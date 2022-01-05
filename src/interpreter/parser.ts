@@ -91,7 +91,7 @@ export type BinaryOperatorType =
   | '=='
   | '&&'
   | '||'
-  | ':='
+  | '='
   | ':=:'
   | ':+:';
 
@@ -314,7 +314,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
 
   const parseAssignment: () => Assignment = () => {
     const identifier = parseIdentifier();
-    assertOperator(':=');
+    assertOperator('=');
     return {
       type: 'assignment',
       left: identifier,
@@ -449,7 +449,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         return [5, 6];
       case '||':
         return [3, 4];
-      case ':=':
+      case '=':
         return [2, 1];
       default:
         return null;

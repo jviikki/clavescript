@@ -616,7 +616,7 @@ export const createEvaluator: (
     exp: BinaryOperator
   ): EventGen<VariableValue> {
     if (exp.left.type !== 'identifier')
-      throw Error('Left operand of assignment := needs to be an identifier');
+      throw Error('Left operand of assignment = needs to be an identifier');
     const value = yield* evaluateExpression(ctx, exp.right);
     ctx.env.set(exp.left.name, value);
     return value;
@@ -736,7 +736,7 @@ export const createEvaluator: (
         return yield* evaluateAddition(ctx, exp);
       case '/':
         return yield* evaluateDivision(ctx, exp);
-      case ':=':
+      case '=':
         return yield* evaluateAssignment(ctx, exp);
       case ':=:':
         return yield* evaluateStackOperator(ctx, exp);
