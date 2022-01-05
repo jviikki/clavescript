@@ -11,7 +11,17 @@ export enum TokenType {
   Boolean,
 }
 
-const punctuationStrings = ['{', '}', ',', '|', ';', '(', ')'] as const;
+const punctuationStrings = [
+  '{',
+  '}',
+  ',',
+  '|',
+  ';',
+  '(',
+  ')',
+  '[',
+  ']',
+] as const;
 type PunctuationString = typeof punctuationStrings[number];
 
 const operatorStrings = [

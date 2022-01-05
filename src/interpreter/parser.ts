@@ -78,6 +78,17 @@ export type FunctionCall = {
   args: FunctionArgs;
 };
 
+export type ArrayLiteral = {
+  type: 'array_literal';
+  items: Expression[];
+};
+
+export type ArrayIndexOperator = {
+  type: 'index';
+  array: Expression;
+  index: Expression;
+};
+
 export type BinaryOperatorType =
   | '/'
   | '*'
@@ -120,7 +131,9 @@ export type Expression =
   | Identifier
   | Integer
   | Float
-  | BooleanLiteral;
+  | BooleanLiteral
+  | ArrayLiteral
+  | ArrayIndexOperator;
 
 export type ReturnStmt = {
   type: 'return';
@@ -353,6 +366,17 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     args: parseDelimitedList('(', ')', ',', parseExpression),
   });
 
+  const parseArrayIndex: (expr: Expression) => ArrayIndexOperator = expr => {
+    assertPunc('[');
+    const indexExpression = parseExpression();
+    assertPunc(']');
+    return {
+      type: 'index',
+      array: expr,
+      index: indexExpression,
+    };
+  };
+
   const parseDelimitedList: <T>(
     start: string,
     stop: string,
@@ -414,9 +438,12 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     }
   };
 
-  const getPostfixOperatorBindingPower: (op: '(') => BindingPower = op => {
+  const getPostfixOperatorBindingPower: (
+    op: '(' | '['
+  ) => BindingPower = op => {
     switch (op) {
       case '(':
+      case '[':
         return [17, 0];
       default:
         throw new Error(`Parse error: Unrecognized operator ${op}`);
@@ -479,6 +506,13 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     }
   };
 
+  const parseArrayLiteral: () => ArrayLiteral = () => {
+    return {
+      type: 'array_literal',
+      items: parseDelimitedList('[', ']', ',', parseExpression),
+    };
+  };
+
   const parseExpressionWithBP: (minBP: number) => Expression = minBP => {
     let lhs: Expression | null = null;
     const token = tokenizer.peek();
@@ -503,6 +537,9 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
           assertPunc('(');
           lhs = parseExpressionWithBP(0);
           assertPunc(')');
+          break;
+        } else if (token.value === '[') {
+          lhs = parseArrayLiteral();
           break;
         }
         throw new Error(
@@ -538,6 +575,11 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         const bp = getPostfixOperatorBindingPower(op.value);
         if (bp[0] < minBP) break;
         lhs = parseCall(lhs);
+        continue;
+      } else if (op.type === TokenType.Punctuation && op.value === '[') {
+        const bp = getPostfixOperatorBindingPower(op.value);
+        if (bp[0] < minBP) break;
+        lhs = parseArrayIndex(lhs);
         continue;
       }
 
