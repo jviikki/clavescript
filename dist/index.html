@@ -34,28 +34,28 @@
 
 tempo 100;
 
-pattern :=
-  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x := 88 } :=:
-  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x := 44 } :=:
-  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x := 25 } :+:
+pattern =
+  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
+  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
+  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 } :+:
 
-  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x := 88 } :=:
-  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x := 44 } :=:
-  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x := 25 } :+:
+  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
+  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
+  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 } :+:
 
-  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x := 88 } :=:
-  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x := 44 } :=:
-  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x := 25 };
+  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
+  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
+  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 };
 
 loop pattern;
 
-foo := fun(x, y) {
+foo = fun(x, y) {
   play x;
   sleep y;
 };
 
 
-seqfoo := seq {
+seqfoo = seq {
   foo(40, 1);
   foo(47, 1);
 };

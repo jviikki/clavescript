@@ -9,21 +9,21 @@ describe('parser', () => {
       '\n' +
       'tempo 100; # set the tempo here\n' +
       '\n' +
-      'pattern :=\n' +
-      '  step { x -  | x := 88 }        :=:\n' +
-      '  step { x - x - - x | x := 44 } :=:\n' +
-      '  step { x - - - | x := 25 }     :+:\n' +
+      'pattern =\n' +
+      '  step { x -  | x = 88 }        :=:\n' +
+      '  step { x - x - - x | x = 44 } :=:\n' +
+      '  step { x - - - | x = 25 }     :+:\n' +
       '\n' +
-      '  step { x - x y | x := 88, y := 39 }     :=:\n' +
-      '  step { x - x - | x := 44 }     :=:\n' +
-      '  step { x - - - | x := 25 }     :+:\n' +
+      '  step { x - x y | x = 88, y = 39 }     :=:\n' +
+      '  step { x - x - | x = 44 }     :=:\n' +
+      '  step { x - - - | x = 25 }     :+:\n' +
       '\n' +
-      '(  step { x - x - | x := 88 }    :=:\n' +
-      '   step { x - x | x := 44 }      :=:\n' +
-      '   step { x - - 60 | x := 25 }  );\n' +
+      '(  step { x - x - | x = 88 }    :=:\n' +
+      '   step { x - x | x = 44 }      :=:\n' +
+      '   step { x - - 60 | x = 25 }  );\n' +
       '\n' +
       '# Some more comments\n' +
-      'pattern2 := seq {\n' +
+      'pattern2 = seq {\n' +
       '  play 40;' +
       '  sleep 2;\n' +
       '  play 41; \n' +
@@ -44,7 +44,7 @@ describe('parser', () => {
         },
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'pattern',
@@ -379,7 +379,7 @@ describe('parser', () => {
         },
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'pattern2',
@@ -434,17 +434,17 @@ describe('parser', () => {
     const input =
       'tempo 100;\n' +
       '\n' +
-      'x := 30;\n' +
+      'x = 30;\n' +
       '\n' +
-      'seqfoo := seq {\n' +
+      'seqfoo = seq {\n' +
       '  (fun (x, y) {\n' +
       '    play x; sleep y;\n' +
-      '  })(x := x + 3, 0.2);\n' +
+      '  })(x = x + 3, 0.2);\n' +
       '  if (x >= 78) {\n' +
-      '      x := 30;\n' +
-      '  } else if (1 == 2) x := 44;\n' +
+      '      x = 30;\n' +
+      '  } else if (1 == 2) x = 44;\n' +
       '  else {\n' +
-      '    # x := 35;\n' +
+      '    # x = 35;\n' +
       '    play 3 * (15 - 5);\n' +
       '    sleep 0.2;\n' +
       '  }\n' +
@@ -465,7 +465,7 @@ describe('parser', () => {
         },
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'x',
@@ -477,7 +477,7 @@ describe('parser', () => {
         },
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'seqfoo',
@@ -512,7 +512,7 @@ describe('parser', () => {
                 args: [
                   {
                     type: 'binary_operator',
-                    operator: ':=',
+                    operator: '=',
                     left: {
                       type: 'identifier',
                       name: 'x',
@@ -555,7 +555,7 @@ describe('parser', () => {
                   statements: [
                     {
                       type: 'binary_operator',
-                      operator: ':=',
+                      operator: '=',
                       left: {
                         type: 'identifier',
                         name: 'x',
@@ -583,7 +583,7 @@ describe('parser', () => {
                   },
                   body: {
                     type: 'binary_operator',
-                    operator: ':=',
+                    operator: '=',
                     left: {
                       type: 'identifier',
                       name: 'x',
@@ -653,14 +653,14 @@ describe('parser', () => {
 
   it('Parse while loop properly', () => {
     const input =
-      'x := 30;\n' +
-      'seqfoo := seq { \n' +
+      'x = 30;\n' +
+      'seqfoo = seq { \n' +
       '  while (x < 85) {\n' +
       '    play x;\n' +
       '    sleep 0.2;\n' +
-      '    x := x + 3;\n' +
+      '    x = x + 3;\n' +
       '  }\n' +
-      '  x := 30;\n' +
+      '  x = 30;\n' +
       '};\n' +
       'loop seqfoo;';
 
@@ -669,7 +669,7 @@ describe('parser', () => {
       statements: [
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'x',
@@ -681,7 +681,7 @@ describe('parser', () => {
         },
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'seqfoo',
@@ -724,7 +724,7 @@ describe('parser', () => {
                     },
                     {
                       type: 'binary_operator',
-                      operator: ':=',
+                      operator: '=',
                       left: {
                         type: 'identifier',
                         name: 'x',
@@ -747,7 +747,7 @@ describe('parser', () => {
               },
               {
                 type: 'binary_operator',
-                operator: ':=',
+                operator: '=',
                 left: {
                   type: 'identifier',
                   name: 'x',
@@ -780,8 +780,8 @@ describe('parser', () => {
     const input =
       'tempo 100;\n' +
       '\n' +
-      'seqfoo := seq {\n' +
-      '  for (x := 30; x < 85; x := x + 3) {\n' +
+      'seqfoo = seq {\n' +
+      '  for (x = 30; x < 85; x = x + 3) {\n' +
       '    play x;\n' +
       '    sleep 0.2;\n' +
       '  }\n' +
@@ -802,7 +802,7 @@ describe('parser', () => {
         },
         {
           type: 'binary_operator',
-          operator: ':=',
+          operator: '=',
           left: {
             type: 'identifier',
             name: 'seqfoo',
@@ -815,7 +815,7 @@ describe('parser', () => {
                 statements: [
                   {
                     type: 'binary_operator',
-                    operator: ':=',
+                    operator: '=',
                     left: {
                       type: 'identifier',
                       name: 'x',
@@ -860,7 +860,7 @@ describe('parser', () => {
                         },
                         {
                           type: 'binary_operator',
-                          operator: ':=',
+                          operator: '=',
                           left: {
                             type: 'identifier',
                             name: 'x',

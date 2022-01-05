@@ -29,7 +29,7 @@ const operatorStrings = [
   '==',
   '&&',
   '||',
-  ':=',
+  '=',
   '!',
 ] as const;
 type OperatorString = typeof operatorStrings[number];
