@@ -19,6 +19,8 @@ import {
   IfStmt,
   WhileStmt,
   ReturnStmt,
+  ArrayLiteral,
+  ArrayIndexOperator,
 } from './parser';
 import {
   EventSourceSequence,
@@ -40,6 +42,7 @@ type VariableMusicalEventSource = {
 };
 type VariableFunctionDefinition = {type: 'fun'; value: FunctionDefinition};
 type VariableBoolean = {type: 'boolean'; value: boolean};
+type VariableArray = {type: 'array'; items: VariableValue[]};
 type VariableNil = {type: 'nil'};
 
 type VariableValue =
@@ -48,6 +51,7 @@ type VariableValue =
   | VariableMusicalEventSource
   | VariableFunctionDefinition
   | VariableBoolean
+  | VariableArray
   | VariableNil;
 
 type Environment = {
@@ -615,11 +619,30 @@ export const createEvaluator: (
     ctx: Context,
     exp: BinaryOperator
   ): EventGen<VariableValue> {
-    if (exp.left.type !== 'identifier')
+    if (exp.left.type === 'identifier') {
+      const value = yield* evaluateExpression(ctx, exp.right);
+      ctx.env.set(exp.left.name, value);
+      return value;
+    } else if (exp.left.type === 'index') {
+      const value = yield* evaluateExpression(ctx, exp.right);
+      const index = yield* evaluateExpression(ctx, exp.left.index);
+      if (index.type !== 'number' || !Number.isInteger(index.value))
+        throw Error('Arrays must be indexed with integers');
+      const array = yield* evaluateExpression(ctx, exp.left.array);
+      if (array.type !== 'array') {
+        throw Error('Indexing of arrays is only allowed');
+      }
+      if (index.value < 0 || index.value >= array.items.length) {
+        throw Error(`Index ${index.value} outside of array bounds`);
+      }
+
+      array.items[index.value] = value;
+      if (exp.left.array.type === 'identifier')
+        ctx.env.set(exp.left.array.name, array);
+      return array;
+    } else {
       throw Error('Left operand of assignment = needs to be an identifier');
-    const value = yield* evaluateExpression(ctx, exp.right);
-    ctx.env.set(exp.left.name, value);
-    return value;
+    }
   }
 
   function* evaluateStackOperator(
@@ -755,6 +778,39 @@ export const createEvaluator: (
     }
   }
 
+  function* evaluateArrayLiteral(
+    ctx: Context,
+    exp: ArrayLiteral
+  ): EventGen<VariableArray> {
+    const items = [];
+    for (const item of exp.items) {
+      items.push(yield* evaluateExpression(ctx, item));
+    }
+    return {
+      type: 'array',
+      items: items,
+    };
+  }
+
+  function* evaluateArrayIndex(
+    ctx: Context,
+    exp: ArrayIndexOperator
+  ): EventGen<VariableValue> {
+    const array = yield* evaluateExpression(ctx, exp.array);
+    if (array.type !== 'array') {
+      throw Error('Only arrays can be indexed');
+    }
+    const index = yield* evaluateExpression(ctx, exp.index);
+    if (index.type !== 'number' || !Number.isInteger(index.value)) {
+      throw Error('Arrays can only be indexed with integers');
+    }
+    if (index.value < 0 || index.value >= array.items.length) {
+      throw Error(`Index ${index.value} outside of array bounds`);
+    }
+
+    return array.items[index.value];
+  }
+
   function* evaluateExpression(
     ctx: Context,
     exp: Expression
@@ -785,11 +841,9 @@ export const createEvaluator: (
           value: evaluateMusicalProcedure(ctx, exp),
         };
       case 'array_literal':
-        // TODO: evaluate array literal
-        return {type: 'nil'};
+        return yield* evaluateArrayLiteral(ctx, exp);
       case 'index':
-        // TODO: evaluate array index
-        return {type: 'nil'};
+        return yield* evaluateArrayIndex(ctx, exp);
     }
   }
 
