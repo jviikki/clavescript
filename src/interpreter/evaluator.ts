@@ -615,6 +615,29 @@ export const createEvaluator: (
     return {type: 'number', value: left.value / right.value};
   }
 
+  function* evaluateAssignmentToArrayIndex(
+    ctx: Context,
+    exp: BinaryOperator
+  ): EventGen<VariableArray> {
+    if (exp.left.type !== 'index') throw Error('Array indexing expected');
+    const value = yield* evaluateExpression(ctx, exp.right);
+    const index = yield* evaluateExpression(ctx, exp.left.index);
+    if (index.type !== 'number' || !Number.isInteger(index.value))
+      throw Error('Arrays must be indexed with integers');
+    const array = yield* evaluateExpression(ctx, exp.left.array);
+    if (array.type !== 'array') {
+      throw Error('Indexing of arrays is only allowed');
+    }
+    if (index.value < 0 || index.value >= array.items.length) {
+      throw Error(`Index ${index.value} outside of array bounds`);
+    }
+
+    array.items[index.value] = value;
+    if (exp.left.array.type === 'identifier')
+      ctx.env.set(exp.left.array.name, array);
+    return array;
+  }
+
   function* evaluateAssignment(
     ctx: Context,
     exp: BinaryOperator
@@ -624,22 +647,7 @@ export const createEvaluator: (
       ctx.env.set(exp.left.name, value);
       return value;
     } else if (exp.left.type === 'index') {
-      const value = yield* evaluateExpression(ctx, exp.right);
-      const index = yield* evaluateExpression(ctx, exp.left.index);
-      if (index.type !== 'number' || !Number.isInteger(index.value))
-        throw Error('Arrays must be indexed with integers');
-      const array = yield* evaluateExpression(ctx, exp.left.array);
-      if (array.type !== 'array') {
-        throw Error('Indexing of arrays is only allowed');
-      }
-      if (index.value < 0 || index.value >= array.items.length) {
-        throw Error(`Index ${index.value} outside of array bounds`);
-      }
-
-      array.items[index.value] = value;
-      if (exp.left.array.type === 'identifier')
-        ctx.env.set(exp.left.array.name, array);
-      return array;
+      return yield* evaluateAssignmentToArrayIndex(ctx, exp);
     } else {
       throw Error('Left operand of assignment = needs to be an identifier');
     }
