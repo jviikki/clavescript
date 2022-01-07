@@ -901,4 +901,288 @@ describe('parser', () => {
 
     expect(output).toEqual(expectedOutput);
   });
+
+  it('Parse arrays', () => {
+    const input =
+      'foo = fun() {\n' +
+      '  arr = [40, 50, 45, 47, 35];\n' +
+      '  len = 5;\n' +
+      '  for (i = 0; i < len; i = i + 1) {\n' +
+      '    play arr[i];\n' +
+      '    sleep 1;\n' +
+      '  }\n' +
+      '\n' +
+      '  arr[len - 5] = 40;\n' +
+      '  for (i = 0; i < len; i = i + 1) {\n' +
+      '    play arr[i];\n' +
+      '    sleep 1;\n' +
+      '  }\n' +
+      '\n' +
+      '  sleep 1;\n' +
+      '};';
+
+    const expectedOutput: Program = {
+      type: 'program',
+      statements: [
+        {
+          type: 'binary_operator',
+          operator: '=',
+          left: {
+            type: 'identifier',
+            name: 'foo',
+          },
+          right: {
+            type: 'fun',
+            params: [],
+            body: [
+              {
+                type: 'binary_operator',
+                operator: '=',
+                left: {
+                  type: 'identifier',
+                  name: 'arr',
+                },
+                right: {
+                  type: 'array_literal',
+                  items: [
+                    {
+                      type: 'integer',
+                      value: 40,
+                    },
+                    {
+                      type: 'integer',
+                      value: 50,
+                    },
+                    {
+                      type: 'integer',
+                      value: 45,
+                    },
+                    {
+                      type: 'integer',
+                      value: 47,
+                    },
+                    {
+                      type: 'integer',
+                      value: 35,
+                    },
+                  ],
+                },
+              },
+              {
+                type: 'binary_operator',
+                operator: '=',
+                left: {
+                  type: 'identifier',
+                  name: 'len',
+                },
+                right: {
+                  type: 'integer',
+                  value: 5,
+                },
+              },
+              {
+                type: 'block',
+                statements: [
+                  {
+                    type: 'binary_operator',
+                    operator: '=',
+                    left: {
+                      type: 'identifier',
+                      name: 'i',
+                    },
+                    right: {
+                      type: 'integer',
+                      value: 0,
+                    },
+                  },
+                  {
+                    type: 'while',
+                    condition: {
+                      type: 'binary_operator',
+                      operator: '<',
+                      left: {
+                        type: 'identifier',
+                        name: 'i',
+                      },
+                      right: {
+                        type: 'identifier',
+                        name: 'len',
+                      },
+                    },
+                    body: {
+                      type: 'block',
+                      statements: [
+                        {
+                          type: 'cmd',
+                          name: 'play',
+                          arg: {
+                            type: 'index',
+                            array: {
+                              type: 'identifier',
+                              name: 'arr',
+                            },
+                            index: {
+                              type: 'identifier',
+                              name: 'i',
+                            },
+                          },
+                        },
+                        {
+                          type: 'cmd',
+                          name: 'sleep',
+                          arg: {
+                            type: 'integer',
+                            value: 1,
+                          },
+                        },
+                        {
+                          type: 'binary_operator',
+                          operator: '=',
+                          left: {
+                            type: 'identifier',
+                            name: 'i',
+                          },
+                          right: {
+                            type: 'binary_operator',
+                            operator: '+',
+                            left: {
+                              type: 'identifier',
+                              name: 'i',
+                            },
+                            right: {
+                              type: 'integer',
+                              value: 1,
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+              {
+                type: 'binary_operator',
+                operator: '=',
+                left: {
+                  type: 'index',
+                  array: {
+                    type: 'identifier',
+                    name: 'arr',
+                  },
+                  index: {
+                    type: 'binary_operator',
+                    operator: '-',
+                    left: {
+                      type: 'identifier',
+                      name: 'len',
+                    },
+                    right: {
+                      type: 'integer',
+                      value: 5,
+                    },
+                  },
+                },
+                right: {
+                  type: 'integer',
+                  value: 40,
+                },
+              },
+              {
+                type: 'block',
+                statements: [
+                  {
+                    type: 'binary_operator',
+                    operator: '=',
+                    left: {
+                      type: 'identifier',
+                      name: 'i',
+                    },
+                    right: {
+                      type: 'integer',
+                      value: 0,
+                    },
+                  },
+                  {
+                    type: 'while',
+                    condition: {
+                      type: 'binary_operator',
+                      operator: '<',
+                      left: {
+                        type: 'identifier',
+                        name: 'i',
+                      },
+                      right: {
+                        type: 'identifier',
+                        name: 'len',
+                      },
+                    },
+                    body: {
+                      type: 'block',
+                      statements: [
+                        {
+                          type: 'cmd',
+                          name: 'play',
+                          arg: {
+                            type: 'index',
+                            array: {
+                              type: 'identifier',
+                              name: 'arr',
+                            },
+                            index: {
+                              type: 'identifier',
+                              name: 'i',
+                            },
+                          },
+                        },
+                        {
+                          type: 'cmd',
+                          name: 'sleep',
+                          arg: {
+                            type: 'integer',
+                            value: 1,
+                          },
+                        },
+                        {
+                          type: 'binary_operator',
+                          operator: '=',
+                          left: {
+                            type: 'identifier',
+                            name: 'i',
+                          },
+                          right: {
+                            type: 'binary_operator',
+                            operator: '+',
+                            left: {
+                              type: 'identifier',
+                              name: 'i',
+                            },
+                            right: {
+                              type: 'integer',
+                              value: 1,
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+              {
+                type: 'cmd',
+                name: 'sleep',
+                arg: {
+                  type: 'integer',
+                  value: 1,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const output = parse(createTokenizer(createInputStream(input)));
+
+    expect(output).toEqual(expectedOutput);
+  });
 });
