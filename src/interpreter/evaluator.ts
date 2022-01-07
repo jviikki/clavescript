@@ -626,7 +626,7 @@ export const createEvaluator: (
       throw Error('Arrays must be indexed with integers');
     const array = yield* evaluateExpression(ctx, exp.left.array);
     if (array.type !== 'array') {
-      throw Error('Indexing of arrays is only allowed');
+      throw Error('Trying to index a type that is not an array');
     }
     if (index.value < 0 || index.value >= array.items.length) {
       throw Error(`Index ${index.value} outside of array bounds`);
