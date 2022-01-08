@@ -41,6 +41,11 @@ type VariableMusicalEventSource = {
   value: MusicalEventSource;
 };
 type VariableFunctionDefinition = {type: 'fun'; value: FunctionDefinition};
+type VariableBuiltInFunction = {
+  type: 'internal';
+  name: string;
+  value: (...args: VariableValue[]) => VariableValue;
+};
 type VariableBoolean = {type: 'boolean'; value: boolean};
 type VariableArray = {type: 'array'; items: VariableValue[]};
 type VariableNil = {type: 'nil'};
@@ -50,6 +55,7 @@ type VariableValue =
   | VariableSequence
   | VariableMusicalEventSource
   | VariableFunctionDefinition
+  | VariableBuiltInFunction
   | VariableBoolean
   | VariableArray
   | VariableNil;
@@ -161,6 +167,17 @@ export const createEvaluator: (
     playUntil: 0,
   };
 
+  // Built-in functions
+  ctx.env.set('len', {
+    type: 'internal',
+    name: 'len',
+    value: (val: VariableValue) => {
+      if (val.type !== 'array')
+        throw Error("Built-in function 'len' can only be applied to arrays");
+      return {type: 'number', value: val.items.length};
+    },
+  });
+
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,
     exp
@@ -229,11 +246,31 @@ export const createEvaluator: (
     }
   }
 
+  function* evaluateCallToBuiltInFunction(
+    ctx: Context,
+    call: FunctionCall,
+    fun: VariableBuiltInFunction
+  ): EventGen<VariableValue> {
+    if (call.args.length !== fun.value.length)
+      throw Error(
+        `Built-in function ${fun.name} expects ${fun.value.length} arguments. ${call.args.length} arguments provided.`
+      );
+    const args: VariableValue[] = [];
+    for (const arg of call.args) {
+      args.push(yield* evaluateExpression(ctx, arg));
+    }
+    return fun.value(...args);
+  }
+
   function* evaluateFunctionCall(
     ctx: Context,
     expr: FunctionCall
   ): EventGen<VariableValue> {
     const func = yield* evaluateExpression(ctx, expr.func);
+
+    if (func.type === 'internal') {
+      return yield* evaluateCallToBuiltInFunction(ctx, expr, func);
+    }
 
     if (func.type !== 'fun') {
       throw Error('Attempting to call a non-function');
@@ -648,6 +685,16 @@ export const createEvaluator: (
   ): EventGen<VariableValue> {
     if (exp.left.type === 'identifier') {
       const value = yield* evaluateExpression(ctx, exp.right);
+      const currentValue = ctx.env.get(exp.left.name);
+      if (currentValue && currentValue.type === 'internal') {
+        throw Error(
+          `Unable to overwrite or assign built-in function: ${currentValue.name}`
+        );
+      }
+      if (value.type === 'internal')
+        throw Error(
+          `Cannot assign built-in function ${value.name} to a variable`
+        );
       ctx.env.set(exp.left.name, value);
       return value;
     } else if (exp.left.type === 'index') {
