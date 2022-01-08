@@ -513,12 +513,16 @@ export const createEvaluator: (
   function* evaluateAddition(
     ctx: Context,
     exp: BinaryOperator
-  ): EventGen<VariableNumber> {
+  ): EventGen<VariableNumber | VariableArray> {
     const left = yield* evaluateExpression(ctx, exp.left);
     const right = yield* evaluateExpression(ctx, exp.right);
-    if (left.type !== 'number' || right.type !== 'number')
+    if (left.type === 'number' && right.type === 'number') {
+      return {type: 'number', value: left.value + right.value};
+    } else if (left.type === 'array' && right.type === 'array') {
+      return {type: 'array', items: [...left.items, ...right.items]};
+    } else {
       throw Error('Operands of + operator should be numbers');
-    return {type: 'number', value: left.value + right.value};
+    }
   }
 
   function* evaluateSubtraction(
