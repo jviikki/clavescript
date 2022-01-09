@@ -29,6 +29,7 @@ import {
   Sequencer,
   sequenceToEventSource,
 } from '../music/sequencer';
+import {initializeBuiltInFunctions} from './built-in-functions';
 
 export type Evaluator = {
   evaluate(p: Program): void;
@@ -50,7 +51,7 @@ type VariableBoolean = {type: 'boolean'; value: boolean};
 type VariableArray = {type: 'array'; items: VariableValue[]};
 type VariableNil = {type: 'nil'};
 
-type VariableValue =
+export type VariableValue =
   | VariableNumber
   | VariableSequence
   | VariableMusicalEventSource
@@ -60,7 +61,7 @@ type VariableValue =
   | VariableArray
   | VariableNil;
 
-type Environment = {
+export type Environment = {
   extend(): Environment;
   getParent(): Environment | null;
   lookup(name: string): Environment | null;
@@ -167,44 +168,7 @@ export const createEvaluator: (
     playUntil: 0,
   };
 
-  // Built-in functions
-  ctx.env.set('len', {
-    type: 'internal',
-    name: 'len',
-    value: (val: VariableValue) => {
-      if (val.type !== 'array')
-        throw Error("Built-in function 'len' can only be applied to arrays");
-      return {type: 'number', value: val.items.length};
-    },
-  });
-
-  ctx.env.set('rand', {
-    type: 'internal',
-    name: 'rand',
-    value: () => {
-      return {type: 'number', value: Math.random()};
-    },
-  });
-
-  ctx.env.set('floor', {
-    type: 'internal',
-    name: 'floor',
-    value: (val: VariableValue) => {
-      if (val.type !== 'number')
-        throw Error("Built in function 'floor' can be only applied to numbers");
-      return {type: 'number', value: Math.floor(val.value)};
-    },
-  });
-
-  ctx.env.set('ceil', {
-    type: 'internal',
-    name: 'ceil',
-    value: (val: VariableValue) => {
-      if (val.type !== 'number')
-        throw Error("Built in function 'ceil' can be only applied to numbers");
-      return {type: 'number', value: Math.ceil(val.value)};
-    },
-  });
+  initializeBuiltInFunctions(ctx.env);
 
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,
