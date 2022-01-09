@@ -65,7 +65,7 @@ scales. Also includes a simple bass line.
 There's also a syntax for creating patterns that mimick traditional hardware
 step sequencers.
 
-tempo 100;
+    tempo 100;
 
     pattern =
       step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
