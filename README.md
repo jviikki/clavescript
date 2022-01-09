@@ -16,7 +16,7 @@ The syntax (and semantics) is likely to change rapidly in the future. These
 examples are here to give you an idea of what is currenly supported.
 
 This program plays a random melody alternating between major and harmonic minor
-scales. Also includes a simple bass line.
+scales. It also includes a simple bass line.
 
     tempo 100;
 
