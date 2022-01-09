@@ -715,14 +715,16 @@ export const createEvaluator: (
       const value = yield* evaluateExpression(ctx, exp.right);
       const currentValue = ctx.env.get(exp.left.name);
       if (currentValue && currentValue.type === 'internal') {
+        // TODO: Allow overwriting if internal function is not in global scope.
+        // E.g. it has been assigned to a variable.
         throw Error(
-          `Unable to overwrite or assign built-in function: ${currentValue.name}`
+          `Unable to overwrite a built-in function: ${currentValue.name}`
         );
       }
-      if (value.type === 'internal')
-        throw Error(
-          `Cannot assign built-in function ${value.name} to a variable`
-        );
+      // if (value.type === 'internal')
+      //   throw Error(
+      //     `Cannot assign built-in function ${value.name} to a variable`
+      //   );
       ctx.env.set(exp.left.name, value);
       return value;
     } else if (exp.left.type === 'index') {
