@@ -34,33 +34,64 @@
 
 tempo 100;
 
-pattern =
-  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
-  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
-  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 } :+:
+base = 40;
+major = [0, 2, 4, 5, 7, 9, 11];
+harmonicMinor = [0, 2, 3, 5, 7, 8, 11];
 
-  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
-  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
-  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 } :+:
+randomInteger = fun (maxVal) {
+  return floor(rand() * maxVal);
+};
 
-  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
-  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
-  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 };
+craziness = fun() {
+  coinToss = randomInteger(2);
+  if (coinToss == 1)
+    scale = major;
+  else
+    scale = harmonicMinor;
 
-loop pattern;
-
-foo = fun(x, y) {
-  play x;
-  sleep y;
+  for (i = 0; i < 32; i = i + 1) {
+    note = randomInteger(len(scale));
+    octave = randomInteger(3);
+    play base + scale[note] + octave * 12;
+    sleep 0.25;
+  }
 };
 
 
-seqfoo = seq {
-  foo(40, 1);
-  foo(47, 1);
+melody = seq {
+  craziness();
 };
 
-loop seqfoo;
+loop melody;
+
+bass = seq {
+  base = 40;
+
+  play base;
+  sleep 0.75;
+  play base - 5;
+  sleep 0.50;
+  play base;
+  sleep 0.50;
+};
+
+loop bass;
+
+#pattern =
+#  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
+#  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
+#  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 } :+:
+
+#  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
+#  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
+#  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 } :+:
+
+#  step { x - x - x - x - x - x - x - x - x - x - x - x - x - x - x - | x = 88 } :=:
+#  step { x - x - - x - x - - x - x - - x - x - - x - x - - x - x - - | x = 44 } :=:
+#  step { x - - - - x x - - - - x x - - - - x x - - - - x x - - - - x | x = 25 };
+
+#loop pattern;
+
 </textarea>
 
             <div class="log-messages">
