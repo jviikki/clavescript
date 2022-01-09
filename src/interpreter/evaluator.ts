@@ -178,6 +178,34 @@ export const createEvaluator: (
     },
   });
 
+  ctx.env.set('rand', {
+    type: 'internal',
+    name: 'rand',
+    value: () => {
+      return {type: 'number', value: Math.random()};
+    },
+  });
+
+  ctx.env.set('floor', {
+    type: 'internal',
+    name: 'floor',
+    value: (val: VariableValue) => {
+      if (val.type !== 'number')
+        throw Error("Built in function 'floor' can be only applied to numbers");
+      return {type: 'number', value: Math.floor(val.value)};
+    },
+  });
+
+  ctx.env.set('ceil', {
+    type: 'internal',
+    name: 'ceil',
+    value: (val: VariableValue) => {
+      if (val.type !== 'number')
+        throw Error("Built in function 'ceil' can be only applied to numbers");
+      return {type: 'number', value: Math.ceil(val.value)};
+    },
+  });
+
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,
     exp
