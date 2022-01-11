@@ -2,6 +2,8 @@ import {AudioManager} from './audio';
 import {NoteRef, ReadOnlyInstrumentLibrary} from './instrument';
 import {Logger} from '../logger';
 
+export const LOOKAHEAD_TIME = 100; // ms
+
 export type MusicalEvent = Note | PitchBend;
 
 export type Note = {
@@ -202,7 +204,6 @@ export const createSequencer: (
   logger: Logger
 ) => Sequencer = (audio, instruments, logger) => {
   const SCHEDULER_INTERVAL = 25; // ms
-  const LOOKAHEAD_TIME = 100; // ms
 
   let beatsPerMinute = 120; // Beats (quarter notes) per minute
   let isPlaying = false;
