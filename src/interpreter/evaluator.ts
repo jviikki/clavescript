@@ -24,6 +24,7 @@ import {
 } from './parser';
 import {
   EventSourceSequence,
+  LOOKAHEAD_TIME,
   MusicalEventSource,
   Sequence,
   Sequencer,
@@ -127,11 +128,41 @@ const createEnvironment: (
   return env;
 };
 
+type SlowComputationDetector = {
+  detect: () => void;
+  reset: () => void;
+};
+
+const createSlowComputationDetector: () => SlowComputationDetector = () => {
+  const timeLimit = Math.ceil(0.9 * LOOKAHEAD_TIME);
+  let callCounter = 0;
+  let previousTimeMs = window.performance.now();
+
+  return {
+    detect: () => {
+      callCounter = (callCounter + 1) % 500;
+      if (callCounter === 0) {
+        const currentTimeMs = window.performance.now();
+        const elapsedTime = currentTimeMs - previousTimeMs;
+        if (elapsedTime >= timeLimit) {
+          throw Error(
+            `Slow computation detected. Elapsed time (${elapsedTime} ms) exceeds the limit of ${timeLimit} ms. Aborting the thread.`
+          );
+        }
+      }
+    },
+    reset: () => {
+      previousTimeMs = window.performance.now();
+    },
+  };
+};
+
 type Context = {
   env: Environment;
   seq: Sequence;
   playheadPosition: number;
   playUntil: number;
+  slowComputationDetector: SlowComputationDetector;
 };
 
 type SequenceAndPlayheadPos = {
@@ -166,6 +197,7 @@ export const createEvaluator: (
     seq: [],
     playheadPosition: 0,
     playUntil: 0,
+    slowComputationDetector: createSlowComputationDetector(),
   };
 
   initializeBuiltInFunctions(ctx.env);
@@ -236,6 +268,8 @@ export const createEvaluator: (
       };
       ctx.seq = [];
     }
+
+    ctx.slowComputationDetector.reset();
   }
 
   function* evaluateCallToBuiltInFunction(
@@ -258,6 +292,7 @@ export const createEvaluator: (
     ctx: Context,
     expr: FunctionCall
   ): EventGen<VariableValue> {
+    ctx.slowComputationDetector.detect();
     const func = yield* evaluateExpression(ctx, expr.func);
 
     if (func.type === 'internal') {
@@ -331,6 +366,7 @@ export const createEvaluator: (
         playheadPos: ctx.playheadPosition,
       };
 
+      ctx.slowComputationDetector.reset();
       yield* evaluateBlock(ctx, exp);
 
       return {
@@ -345,6 +381,7 @@ export const createEvaluator: (
       seq: [],
       playheadPosition: 0,
       playUntil: 0,
+      slowComputationDetector: createSlowComputationDetector(),
     });
     evaluator.next(0);
     let currentPlayheadPos = 0;
@@ -357,6 +394,7 @@ export const createEvaluator: (
           seq: [],
           playheadPosition: 0,
           playUntil: 0,
+          slowComputationDetector: createSlowComputationDetector(),
         });
         evaluator.next(0);
         currentPlayheadPos = 0;
@@ -929,6 +967,7 @@ export const createEvaluator: (
     }
 
     while (yield* shouldContinue()) {
+      ctx.slowComputationDetector.detect();
       yield* evaluateStmt(ctx, stmt.body);
     }
   }
@@ -970,6 +1009,7 @@ export const createEvaluator: (
   }
 
   const evaluateAndPlay: (program: Program) => void = program => {
+    ctx.slowComputationDetector.reset();
     runGenerator(evaluateBlock(ctx, program));
     sequencer.play();
   };
