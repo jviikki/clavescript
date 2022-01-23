@@ -34,39 +34,38 @@
 
 tempo 100;
 
-base = 40;
-major = [0, 2, 4, 5, 7, 9, 11];
-harmonicMinor = [0, 2, 3, 5, 7, 8, 11];
+let base = 40;
+let major = [0, 2, 4, 5, 7, 9, 11];
+let harmonicMinor = [0, 2, 3, 5, 7, 8, 11];
 
-randomInteger = fun (maxVal) {
+let randomInteger = fun (maxVal) {
   return floor(rand() * maxVal);
 };
 
-craziness = fun() {
-  coinToss = randomInteger(2);
+let craziness = fun() {
+  let coinToss = randomInteger(2);
+  let scale;
   if (coinToss == 1)
     scale = major;
   else
     scale = harmonicMinor;
 
-  for (i = 0; i < 32; i = i + 1) {
-    note = randomInteger(len(scale));
-    octave = randomInteger(3);
+  for (let i = 0; i < 32; i = i + 1) {
+    let note = randomInteger(len(scale));
+    let octave = randomInteger(3);
     play base + scale[note] + octave * 12;
     sleep 0.25;
   }
 };
 
 
-melody = seq {
+let melody = seq {
   craziness();
 };
 
 loop melody;
 
-bass = seq {
-  base = 40;
-
+let bass = seq {
   play base;
   sleep 0.75;
   play base - 5;
