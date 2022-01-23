@@ -153,12 +153,19 @@ export type WhileStmt = {
   body: Statement;
 };
 
+export type VariableDeclaration = {
+  type: 'var';
+  identifier: string;
+  value: Expression | undefined;
+};
+
 export type Statement =
   | BuiltInCommand
   | Expression
   | ReturnStmt
   | IfStmt
   | WhileStmt
+  | VariableDeclaration
   | Block;
 
 export type Block = {
@@ -657,9 +664,14 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     assertPunc('(');
 
     let nextToken = tokenizer.peek();
-    let initializer: Expression | undefined = undefined;
+    let initializer: Expression | VariableDeclaration | undefined = undefined;
     if (nextToken.type === TokenType.Punctuation && nextToken.value === ';') {
       tokenizer.next();
+    } else if (
+      nextToken.type === TokenType.Keyword &&
+      nextToken.value === 'let'
+    ) {
+      initializer = parseVarDeclaration();
     } else {
       initializer = parseExpressionStmt();
     }
@@ -702,6 +714,27 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     };
   };
 
+  const parseVarDeclaration: () => VariableDeclaration = () => {
+    tokenizer.next(); // "let" keyword. Assume it is already checked.
+    const id = parseIdentifier().name;
+    let expression: Expression | undefined = undefined;
+    const next = tokenizer.next();
+    if (next.type === TokenType.Operator && next.value === '=') {
+      expression = parseExpression();
+      assertPunc(';');
+    } else if (next.type === TokenType.Punctuation && next.value === ';') {
+      expression = undefined;
+    } else {
+      throw Error('Unable to parse variable declaration');
+    }
+
+    return {
+      type: 'var',
+      identifier: id,
+      value: expression,
+    };
+  };
+
   const parseExpressionStmt: () => Expression = () => {
     const expr = parseExpression();
     assertPunc(';');
@@ -721,6 +754,7 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         else if (next.value === 'if') return parseIfStatement();
         else if (next.value === 'while') return parseWhileStatement();
         else if (next.value === 'for') return parseForStatement();
+        else if (next.value === 'let') return parseVarDeclaration();
         else return parseBuiltInCommand();
       default:
         return parseExpressionStmt();

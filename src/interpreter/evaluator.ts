@@ -21,6 +21,7 @@ import {
   ReturnStmt,
   ArrayLiteral,
   ArrayIndexOperator,
+  VariableDeclaration,
 } from './parser';
 import {
   EventSourceSequence,
@@ -716,7 +717,12 @@ export const createEvaluator: (
     if (exp.left.type === 'identifier') {
       const value = yield* evaluateExpression(ctx, exp.right);
       const currentValue = ctx.env.get(exp.left.name);
-      if (currentValue && currentValue.type === 'internal') {
+
+      if (!currentValue) {
+        throw Error(
+          `Unable to assign value to an undeclared variable: ${exp.left.name}`
+        );
+      } else if (currentValue.type === 'internal') {
         // TODO: Allow overwriting if internal function is not in global scope.
         // E.g. it has been assigned to a variable.
         throw Error(
@@ -976,6 +982,16 @@ export const createEvaluator: (
     throw new ReturnValue(yield* evaluateExpression(ctx, stmt.value));
   }
 
+  function* evaluateVariableDeclaration(
+    ctx: Context,
+    stmt: VariableDeclaration
+  ): EventGen<void> {
+    const value: VariableValue = stmt.value
+      ? yield* evaluateExpression(ctx, stmt.value)
+      : {type: 'nil'};
+    ctx.env.def(stmt.identifier, value);
+  }
+
   function* evaluateStmt(ctx: Context, stmt: Statement): EventGen<void> {
     switch (stmt.type) {
       case 'cmd':
@@ -992,6 +1008,9 @@ export const createEvaluator: (
         break;
       case 'block':
         yield* evaluateBlock(ctx, stmt);
+        break;
+      case 'var':
+        yield* evaluateVariableDeclaration(ctx, stmt);
         break;
       default:
         yield* evaluateExpression(ctx, stmt);
