@@ -43,7 +43,11 @@ type VariableMusicalEventSource = {
   type: 'musical_event_source';
   value: MusicalEventSource;
 };
-type VariableFunctionDefinition = {type: 'fun'; value: FunctionDefinition};
+type VariableFunctionDefinition = {
+  type: 'fun';
+  value: FunctionDefinition;
+  closure: Environment;
+};
 type VariableBuiltInFunction = {
   type: 'internal';
   name: string;
@@ -65,6 +69,7 @@ export type VariableValue =
 
 export type Environment = {
   extend(): Environment;
+  copy(): Environment;
   getParent(): Environment | null;
   lookup(name: string): Environment | null;
   isInCurrentScope(name: string): boolean;
@@ -85,6 +90,12 @@ const createEnvironment: (
   const env = {
     extend(): Environment {
       return createEnvironment(env, Object.create(scope));
+    },
+
+    copy(): Environment {
+      const copiedScope = {...scope};
+      Object.setPrototypeOf(copiedScope, Object.getPrototypeOf(scope));
+      return createEnvironment(parent, copiedScope);
     },
 
     getParent(): Environment | null {
@@ -206,7 +217,13 @@ export const createEvaluator: (
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,
     exp
-  ) => ctx.env.get(exp.name);
+  ) => {
+    const v = ctx.env.get(exp.name);
+    if (!v) {
+      throw Error(`Accessing undefined identifier: ${exp.name}`);
+    }
+    return v;
+  };
 
   const evaluateInteger: (exp: Integer) => VariableNumber = exp => ({
     type: 'number',
@@ -310,15 +327,17 @@ export const createEvaluator: (
       );
     }
 
-    const oldEnv = ctx.env;
-    ctx.env = ctx.env.extend();
+    const funEnv = func.closure.extend();
 
     for (let i = 0; i < expr.args.length; i++) {
-      ctx.env.set(
+      funEnv.def(
         func.value.params[i],
         yield* evaluateExpression(ctx, expr.args[i])
       );
     }
+
+    const oldEnv = ctx.env;
+    ctx.env = funEnv;
 
     try {
       yield* evaluateFunctionBody(ctx, func.value.body);
@@ -343,6 +362,7 @@ export const createEvaluator: (
     return {
       type: 'fun',
       value: stmt,
+      closure: ctx.env, //.copy(),
     };
   }
 
