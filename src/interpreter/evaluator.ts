@@ -46,7 +46,7 @@ type VariableMusicalEventSource = {
 type VariableFunctionDefinition = {
   type: 'fun';
   value: FunctionDefinition;
-  closure: Environment;
+  env: Environment;
 };
 type VariableBuiltInFunction = {
   type: 'internal';
@@ -69,7 +69,6 @@ export type VariableValue =
 
 export type Environment = {
   extend(): Environment;
-  copy(): Environment;
   getParent(): Environment | null;
   lookup(name: string): Environment | null;
   isInCurrentScope(name: string): boolean;
@@ -90,12 +89,6 @@ const createEnvironment: (
   const env = {
     extend(): Environment {
       return createEnvironment(env, Object.create(scope));
-    },
-
-    copy(): Environment {
-      const copiedScope = {...scope};
-      Object.setPrototypeOf(copiedScope, Object.getPrototypeOf(scope));
-      return createEnvironment(parent, copiedScope);
     },
 
     getParent(): Environment | null {
@@ -327,7 +320,7 @@ export const createEvaluator: (
       );
     }
 
-    const funEnv = func.closure.extend();
+    const funEnv = func.env.extend();
 
     for (let i = 0; i < expr.args.length; i++) {
       funEnv.def(
@@ -362,7 +355,7 @@ export const createEvaluator: (
     return {
       type: 'fun',
       value: stmt,
-      closure: ctx.env, //.copy(),
+      env: ctx.env,
     };
   }
 
