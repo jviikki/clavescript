@@ -57,6 +57,7 @@ const keywordStrings = [
   'while',
   'for',
   'let',
+  'nil',
   ...commandStrings,
 ] as const;
 export type KeywordString = typeof keywordStrings[number];

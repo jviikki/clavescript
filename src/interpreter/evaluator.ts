@@ -591,6 +591,10 @@ export const createEvaluator: (
     value: exp.value,
   });
 
+  const evaluateNil: () => VariableNil = () => ({
+    type: 'nil',
+  });
+
   function* evaluateAddition(
     ctx: Context,
     exp: BinaryOperator
@@ -926,6 +930,8 @@ export const createEvaluator: (
     exp: Expression
   ): EventGen<VariableValue> {
     switch (exp.type) {
+      case 'nil':
+        return evaluateNil();
       case 'boolean':
         return evaluateBoolean(exp);
       case 'integer':

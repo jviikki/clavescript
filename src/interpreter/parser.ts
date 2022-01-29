@@ -121,6 +121,10 @@ export type UnaryOperator = {
   operand: Expression;
 };
 
+export type NilLiteral = {
+  type: 'nil';
+};
+
 export type Expression =
   | BinaryOperator
   | UnaryOperator
@@ -133,7 +137,8 @@ export type Expression =
   | Float
   | BooleanLiteral
   | ArrayLiteral
-  | ArrayIndexOperator;
+  | ArrayIndexOperator
+  | NilLiteral;
 
 export type ReturnStmt = {
   type: 'return';
@@ -490,16 +495,24 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     }
   };
 
+  const parseNil: () => NilLiteral = () => {
+    tokenizer.next();
+    return {type: 'nil'};
+  };
+
   const parseExpressionKeyword: () =>
     | StepSequence
     | FunctionDefinition
-    | MusicalProcedure = () => {
+    | MusicalProcedure
+    | NilLiteral = () => {
     const token = tokenizer.peek();
     if (token.type !== TokenType.Keyword)
       throw new Error(
         `Parse error: Expected a keyword on line ${tokenizer.line()} (column ${tokenizer.col()})`
       );
     switch (token.value) {
+      case 'nil':
+        return parseNil();
       case 'step':
         return parseStepSequence();
       case 'fun':
@@ -748,7 +761,11 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         if (next.value === '{') return parseBlock();
         else return parseExpressionStmt();
       case TokenType.Keyword:
-        if (next.value === 'fun' || next.value === 'step')
+        if (
+          next.value === 'fun' ||
+          next.value === 'step' ||
+          next.value === 'nil'
+        )
           return parseExpressionStmt();
         else if (next.value === 'return') return parseReturnStatement();
         else if (next.value === 'if') return parseIfStatement();
