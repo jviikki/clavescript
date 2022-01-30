@@ -40,4 +40,15 @@ export const initializeBuiltInFunctions: (
       return {type: 'number', value: Math.ceil(val.value)};
     },
   });
+
+  globalEnv.set('print', {
+    type: 'internal',
+    name: 'print',
+    value: (val: VariableValue) => {
+      if (val.type !== 'string')
+        throw Error("Built-in function 'print' can be only applied to strings");
+      console.log(val.value);
+      return {type: 'nil'};
+    },
+  });
 };

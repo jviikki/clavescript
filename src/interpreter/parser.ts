@@ -21,6 +21,11 @@ export type BooleanLiteral = {
   value: boolean;
 };
 
+export type StringLiteral = {
+  type: 'string';
+  value: string;
+};
+
 export type Identifier = {
   type: 'identifier';
   name: string;
@@ -138,7 +143,8 @@ export type Expression =
   | BooleanLiteral
   | ArrayLiteral
   | ArrayIndexOperator
-  | NilLiteral;
+  | NilLiteral
+  | StringLiteral;
 
 export type ReturnStmt = {
   type: 'return';
@@ -533,6 +539,16 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
     };
   };
 
+  const parseString: () => StringLiteral = () => {
+    const token = tokenizer.next();
+    if (token.type !== TokenType.String)
+      throw Error('Parse error. Expected string.');
+    return {
+      type: 'string',
+      value: token.value,
+    };
+  };
+
   const parseExpressionWithBP: (minBP: number) => Expression = minBP => {
     let lhs: Expression | null = null;
     const token = tokenizer.peek();
@@ -548,6 +564,9 @@ export const parse: (tokenizer: Tokenizer) => Program = tokenizer => {
         break;
       case TokenType.Boolean:
         lhs = parseBoolean();
+        break;
+      case TokenType.String:
+        lhs = parseString();
         break;
       case TokenType.Keyword:
         lhs = parseExpressionKeyword();
