@@ -603,13 +603,15 @@ export const createEvaluator: (
   function* evaluateAddition(
     ctx: Context,
     exp: BinaryOperator
-  ): EventGen<VariableNumber | VariableArray> {
+  ): EventGen<VariableNumber | VariableArray | VariableString> {
     const left = yield* evaluateExpression(ctx, exp.left);
     const right = yield* evaluateExpression(ctx, exp.right);
     if (left.type === 'number' && right.type === 'number') {
       return {type: 'number', value: left.value + right.value};
     } else if (left.type === 'array' && right.type === 'array') {
       return {type: 'array', items: [...left.items, ...right.items]};
+    } else if (left.type === 'string' && right.type === 'string') {
+      return {type: 'string', value: left.value + right.value};
     } else {
       throw Error('Operands of + operator should be numbers');
     }
