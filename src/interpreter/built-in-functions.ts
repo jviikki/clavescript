@@ -1,4 +1,4 @@
-import {Environment, VariableValue} from './evaluator';
+import {Environment, VariableString, VariableValue} from './evaluator';
 import {Logger} from '../logger';
 
 export const initializeBuiltInFunctions: (
@@ -43,14 +43,41 @@ export const initializeBuiltInFunctions: (
     },
   });
 
+  const convertToString: (val: VariableValue) => VariableString = val => {
+    if (val.type === 'string') return {...val};
+    if (val.type === 'number')
+      return {type: 'string', value: val.value.toString(10)};
+    if (val.type === 'boolean')
+      return {type: 'string', value: val.value.toString()};
+    if (val.type === 'array')
+      return {
+        type: 'string',
+        value:
+          '[' +
+          val.items
+            .map(i => {
+              const str = convertToString(i);
+              return i.type === 'string' ? `"${str.value}"` : str.value;
+            })
+            .join(', ') +
+          ']',
+      };
+    if (val.type === 'nil') return {type: 'string', value: 'nil'};
+    throw Error(`Cannot convert ${val.type} to string`);
+  };
+
   globalEnv.set('print', {
     type: 'internal',
     name: 'print',
     value: (val: VariableValue) => {
-      if (val.type !== 'string')
-        throw Error("Built-in function 'print' can be only applied to strings");
-      logger.i(val.value);
+      logger.i(convertToString(val).value);
       return {type: 'nil'};
     },
+  });
+
+  globalEnv.set('str', {
+    type: 'internal',
+    name: 'str',
+    value: convertToString,
   });
 };
