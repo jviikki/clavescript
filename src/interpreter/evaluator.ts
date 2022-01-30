@@ -33,6 +33,7 @@ import {
   sequenceToEventSource,
 } from '../music/sequencer';
 import {initializeBuiltInFunctions} from './built-in-functions';
+import {Logger} from '../logger';
 
 export type Evaluator = {
   evaluate(p: Program): void;
@@ -190,8 +191,9 @@ function runGenerator<T>(gen: EventGen<T>): T {
 }
 
 export const createEvaluator: (
-  sequencer: Sequencer
-) => Evaluator = sequencer => {
+  sequencer: Sequencer,
+  logger: Logger
+) => Evaluator = (sequencer, logger) => {
   class ReturnValue {
     value: VariableValue;
 
@@ -208,7 +210,7 @@ export const createEvaluator: (
     slowComputationDetector: createSlowComputationDetector(),
   };
 
-  initializeBuiltInFunctions(ctx.env);
+  initializeBuiltInFunctions(ctx.env, logger);
 
   const evaluateIdentifier: (ctx: Context, exp: Identifier) => VariableValue = (
     ctx,

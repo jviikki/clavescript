@@ -85,7 +85,7 @@ const setupUI = async () => {
   });
 
   const sequencer = await setupSequencer(logger);
-  const evaluator = createEvaluator(sequencer);
+  const evaluator = createEvaluator(sequencer, logger);
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
   codeArea.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.shiftKey) {

@@ -1,8 +1,10 @@
 import {Environment, VariableValue} from './evaluator';
+import {Logger} from '../logger';
 
 export const initializeBuiltInFunctions: (
-  globalEnv: Environment
-) => void = globalEnv => {
+  globalEnv: Environment,
+  logger: Logger
+) => void = (globalEnv, logger) => {
   globalEnv.set('len', {
     type: 'internal',
     name: 'len',
@@ -47,7 +49,7 @@ export const initializeBuiltInFunctions: (
     value: (val: VariableValue) => {
       if (val.type !== 'string')
         throw Error("Built-in function 'print' can be only applied to strings");
-      console.log(val.value);
+      logger.i(val.value);
       return {type: 'nil'};
     },
   });
