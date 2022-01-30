@@ -9,6 +9,7 @@ export enum TokenType {
   Identifier,
   Float,
   Boolean,
+  String,
 }
 
 const punctuationStrings = [
@@ -101,6 +102,11 @@ export type BooleanToken = {
   value: boolean;
 };
 
+export type StringToken = {
+  type: TokenType.String;
+  value: string;
+};
+
 export type Token =
   | EOFToken
   | PunctuationToken
@@ -109,7 +115,8 @@ export type Token =
   | KeywordToken
   | IdentifierToken
   | FloatToken
-  | BooleanToken;
+  | BooleanToken
+  | StringToken;
 
 export type TokenizerError = {
   type: 'error';
@@ -271,6 +278,20 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
     }
   };
 
+  const readString: () => StringToken | TokenizerError = () => {
+    input.next(); // " character
+    const str = readWhile(c => c !== '"');
+    const quote = input.next();
+    if (quote !== '"') {
+      throw Error('Tokenizer error: unterminated string');
+      // return {type: 'error', msg: 'Unterminated string'};
+    }
+    return {
+      type: TokenType.String,
+      value: str,
+    };
+  };
+
   const readNext: () => Token | TokenizerError = () => {
     ignoreWhile(isWhitespace);
 
@@ -282,6 +303,9 @@ export const createTokenizer: (input: InputStream) => Tokenizer = input => {
     if (ch === '#') {
       skipComment();
       return readNext();
+    }
+    if (ch === '"') {
+      return readString();
     }
     if (isDigit(ch)) {
       return readNumber();

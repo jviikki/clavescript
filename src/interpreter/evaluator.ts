@@ -22,6 +22,7 @@ import {
   ArrayLiteral,
   ArrayIndexOperator,
   VariableDeclaration,
+  StringLiteral,
 } from './parser';
 import {
   EventSourceSequence,
@@ -56,6 +57,7 @@ type VariableBuiltInFunction = {
 type VariableBoolean = {type: 'boolean'; value: boolean};
 type VariableArray = {type: 'array'; items: VariableValue[]};
 type VariableNil = {type: 'nil'};
+type VariableString = {type: 'string'; value: string};
 
 export type VariableValue =
   | VariableNumber
@@ -65,7 +67,8 @@ export type VariableValue =
   | VariableBuiltInFunction
   | VariableBoolean
   | VariableArray
-  | VariableNil;
+  | VariableNil
+  | VariableString;
 
 export type Environment = {
   extend(): Environment;
@@ -925,6 +928,13 @@ export const createEvaluator: (
     return array.items[index.value];
   }
 
+  function evaluateString(ctx: Context, exp: StringLiteral): VariableString {
+    return {
+      type: 'string',
+      value: exp.value,
+    };
+  }
+
   function* evaluateExpression(
     ctx: Context,
     exp: Expression
@@ -940,6 +950,8 @@ export const createEvaluator: (
         return evaluateFloat(exp);
       case 'identifier':
         return evaluateIdentifier(ctx, exp);
+      case 'string':
+        return evaluateString(ctx, exp);
       case 'step_sequence':
         // TODO: change function to return correct value
         return {type: 'sequence', value: evaluateStepSequence(exp)};
