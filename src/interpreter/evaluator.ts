@@ -58,7 +58,7 @@ type VariableBuiltInFunction = {
 type VariableBoolean = {type: 'boolean'; value: boolean};
 type VariableArray = {type: 'array'; items: VariableValue[]};
 type VariableNil = {type: 'nil'};
-type VariableString = {type: 'string'; value: string};
+export type VariableString = {type: 'string'; value: string};
 
 export type VariableValue =
   | VariableNumber
