@@ -245,20 +245,19 @@ export const createEvaluator: (
     else throw Error('Identifier must be a sequence');
   };
 
-  // eslint-disable-next-line require-yield
   function* evaluatePlay(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
     const pitch = yield* evaluateExpression(ctx, stmt.arg);
     if (pitch.type !== 'number')
       throw Error('Play only accepts a number as argument');
 
-    ctx.seq.push({
-      type: 'NOTE',
-      startTime: ctx.playheadPosition,
-      duration: 0.25,
-      volume: 64,
-      pitch: pitch.value,
-      instrument: 'audio',
-    });
+    // ctx.seq.push({
+    //   type: 'NOTE',
+    //   startTime: ctx.playheadPosition,
+    //   duration: 0.25,
+    //   volume: 64,
+    //   pitch: pitch.value,
+    //   instrument: 'audio',
+    // });
     ctx.seq.push({
       type: 'NOTE',
       startTime: ctx.playheadPosition,

@@ -3,10 +3,10 @@ import {createInputStream} from './interpreter/input-stream';
 import {parse} from './interpreter/parser';
 import {createEvaluator, Evaluator} from './interpreter/evaluator';
 import {createAudioManager} from './music/audio';
-import {initializeMIDI, playMidiNote} from './music/midi';
 import {createInstrumentLibrary} from './music/instrument';
 import {createSequencer, Sequencer} from './music/sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
+import {getMIDIAccess, DEFAULT_MIDI_OUTPUT_DEVICE_NAME} from './music/midi';
 
 const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
   input,
@@ -37,14 +37,21 @@ const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
 
 const setupSequencer: (logger: Logger) => Promise<Sequencer> = async logger => {
   const audio = createAudioManager();
-  await initializeMIDI(() => audio.getCurrentTime());
+  const midiAccess = await getMIDIAccess(() => audio.getCurrentTime());
+  const defaultMidiOutput = Array.from(midiAccess.listOutputs().values()).find(
+    v => v.name === DEFAULT_MIDI_OUTPUT_DEVICE_NAME
+  );
   const instruments = createInstrumentLibrary();
   instruments.add('audio', {
     playNote: audio.playNote,
   });
-  instruments.add('midi', {
-    playNote: playMidiNote,
-  });
+  if (defaultMidiOutput) {
+    instruments.add('midi', {
+      playNote: (...args) => {
+        return midiAccess.playNote(defaultMidiOutput, ...args);
+      },
+    });
+  }
   return createSequencer(audio, instruments, logger);
 };
 
