@@ -1,5 +1,6 @@
 import {Environment, VariableString, VariableValue} from './evaluator';
 import {Logger} from '../logger';
+import {getMidiAccess, isWebMIDISupported} from '../music/midi';
 
 export const initializeBuiltInFunctions: (
   globalEnv: Environment,
@@ -79,5 +80,28 @@ export const initializeBuiltInFunctions: (
     type: 'internal',
     name: 'str',
     value: convertToString,
+  });
+
+  globalEnv.set('list_midi_outputs', {
+    type: 'internal',
+    name: 'list_midi_outputs',
+    value: () => {
+      if (!isWebMIDISupported()) {
+        throw Error('Web MIDI API is not supported by the browser');
+      }
+
+      const midi = getMidiAccess();
+      const outputs: VariableString[] = Array.from(
+        midi.listOutputs().values()
+      ).map(o => ({
+        type: 'string',
+        value: o.name || 'undefined',
+      }));
+
+      return {
+        type: 'array',
+        items: outputs,
+      };
+    },
   });
 };

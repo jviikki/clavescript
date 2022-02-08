@@ -19,7 +19,7 @@ export type MIDIAccess = {
 
 let midiAccess: MIDIAccess | null = null;
 
-export const getMIDIAccess: (
+export const initMIDIAccess: (
   getAudioContextTime: () => number
 ) => Promise<MIDIAccess> = async getAudioContextTime => {
   if (midiAccess) return midiAccess;
@@ -71,5 +71,12 @@ export const getMIDIAccess: (
     },
   };
 
+  return midiAccess;
+};
+
+export const getMidiAccess: () => MIDIAccess = () => {
+  if (!midiAccess) {
+    throw Error('MIDI access uninitialized');
+  }
   return midiAccess;
 };
