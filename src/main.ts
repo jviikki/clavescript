@@ -6,7 +6,11 @@ import {createAudioManager} from './music/audio';
 import {createInstrumentLibrary} from './music/instrument';
 import {createSequencer, Sequencer} from './music/sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
-import {getMIDIAccess, DEFAULT_MIDI_OUTPUT_DEVICE_NAME} from './music/midi';
+import {
+  getMIDIAccess,
+  DEFAULT_MIDI_OUTPUT_DEVICE_NAME,
+  isWebMIDISupported,
+} from './music/midi';
 
 const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
   input,
@@ -36,22 +40,29 @@ const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
 };
 
 const setupSequencer: (logger: Logger) => Promise<Sequencer> = async logger => {
-  const audio = createAudioManager();
-  const midiAccess = await getMIDIAccess(() => audio.getCurrentTime());
-  const defaultMidiOutput = Array.from(midiAccess.listOutputs().values()).find(
-    v => v.name === DEFAULT_MIDI_OUTPUT_DEVICE_NAME
-  );
   const instruments = createInstrumentLibrary();
+
+  const audio = createAudioManager();
   instruments.add('audio', {
     playNote: audio.playNote,
   });
-  if (defaultMidiOutput) {
-    instruments.add('midi', {
-      playNote: (...args) => {
-        return midiAccess.playNote(defaultMidiOutput, ...args);
-      },
-    });
+
+  if (isWebMIDISupported()) {
+    const midiAccess = await getMIDIAccess(() => audio.getCurrentTime());
+
+    const defaultMidiOutput = Array.from(
+      midiAccess.listOutputs().values()
+    ).find(v => v.name === DEFAULT_MIDI_OUTPUT_DEVICE_NAME);
+
+    if (defaultMidiOutput) {
+      instruments.add('midi', {
+        playNote: (...args) => {
+          return midiAccess.playNote(defaultMidiOutput, ...args);
+        },
+      });
+    }
   }
+
   return createSequencer(audio, instruments, logger);
 };
 
@@ -93,6 +104,18 @@ const setupUI = async () => {
 
   const sequencer = await setupSequencer(logger);
   const evaluator = createEvaluator(sequencer, logger);
+
+  if (!isWebMIDISupported()) {
+    const notice = document.getElementsByClassName(
+      'midi-disabled-notice'
+    )[0] as HTMLUListElement;
+    notice.style.display = 'list-item';
+    logger.e(
+      'MIDI support is disabled because Web MIDI API is not supported by your browser. ' +
+        'Consider using Chrome.'
+    );
+  }
+
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
   codeArea.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.shiftKey) {

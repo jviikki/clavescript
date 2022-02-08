@@ -100,6 +100,13 @@ textarea#code:focus {
     margin-right: 1rem;
 }
 
+.toolbar li.midi-disabled-notice {
+    font-family: monospace;
+    color: #FF0028;
+    margin-left: auto; /* center */
+    display: none;
+}
+
 .toolbar li.clear-log-item {
     margin-left: auto; /* pull right */
     margin-right: 0;
