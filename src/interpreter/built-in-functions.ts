@@ -1,4 +1,9 @@
-import {Environment, VariableString, VariableValue} from './evaluator';
+import {
+  Environment,
+  VariableArray,
+  VariableString,
+  VariableValue,
+} from './evaluator';
 import {Logger} from '../logger';
 import {getMidiAccess, isWebMIDISupported} from '../music/midi';
 
@@ -91,16 +96,55 @@ export const initializeBuiltInFunctions: (
       }
 
       const midi = getMidiAccess();
-      const outputs: VariableString[] = Array.from(
+      const outputs: VariableArray[] = Array.from(
         midi.listOutputs().values()
       ).map(o => ({
-        type: 'string',
-        value: o.name || 'undefined',
+        type: 'array',
+        items: [
+          {
+            type: 'string',
+            value: o.id,
+          },
+          {
+            type: 'string',
+            value: o.name || 'undefined',
+          },
+        ],
       }));
 
       return {
         type: 'array',
         items: outputs,
+      };
+    },
+  });
+
+  globalEnv.set('create_midi_instrument', {
+    type: 'internal',
+    name: 'create_midi_instrument',
+    value: (outputId: VariableValue, channel: VariableValue) => {
+      if (outputId.type !== 'string')
+        throw Error('MIDI output ID must be a string');
+
+      if (
+        channel.type !== 'number' ||
+        !Number.isInteger(channel.value) ||
+        channel.value < 0 ||
+        channel.value > 15
+      ) {
+        throw Error('MIDI channel must be an integer between 0 - 15');
+      }
+
+      const midi = getMidiAccess();
+      const output = midi.listOutputs().get(outputId.value);
+      if (!output) {
+        throw Error(`MIDI output with ID ${outputId.value} does not exist`);
+      }
+
+      return {
+        type: 'midi_instrument',
+        output: output,
+        channel: 0,
       };
     },
   });
