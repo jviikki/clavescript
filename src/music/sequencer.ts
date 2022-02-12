@@ -1,6 +1,8 @@
 import {AudioManager} from './audio';
 import {NoteRef, ReadOnlyInstrumentLibrary} from './instrument';
 import {Logger} from '../logger';
+import {VariableNote} from '../interpreter/evaluator';
+import {getMidiAccess} from './midi';
 
 export const LOOKAHEAD_TIME = 100; // ms
 
@@ -9,11 +11,7 @@ export type MusicalEvent = Note | PitchBend;
 export type Note = {
   type: 'NOTE';
   startTime: number; // 1 is one beat, i.e quarter note
-  // varNote: VariableNote;
-  instrument: string;
-  pitch: number; // absolute pitch 0 - 128
-  duration: number; // 1 equals one beat, i.e quarter note
-  volume: number; // 0-127 (more or less the same as
+  varNote: VariableNote;
 };
 
 type PitchBend = {
@@ -56,7 +54,9 @@ export const sequenceToEventSource: (
         const event = seq[pos];
         const time = event.type === 'NOTE' ? event.startTime : event.time;
         currentPlayHeadPos =
-          event.type === 'NOTE' ? event.startTime + event.duration : event.time;
+          event.type === 'NOTE'
+            ? event.startTime + event.varNote.duration
+            : event.time;
         if (playheadPos < time) {
           done = false;
           break;
@@ -210,6 +210,27 @@ export const createSequencer: (
   let isPlaying = false;
 
   const loopStorage = createLoopStorage(logger);
+  const midiAccess = getMidiAccess();
+
+  const playNote: (note: Note, absTime: number) => NoteRef = (
+    note,
+    absTime
+  ) => {
+    switch (note.varNote.instrument.type) {
+      case 'midi_instrument':
+        // TODO: Add channel to MIDI note playback
+        return midiAccess.playNote(
+          note.varNote.instrument.output,
+          note.varNote.pitch,
+          note.varNote.volume,
+          absTime
+        );
+      case 'audio_instrument':
+        return instruments
+          .get(note.varNote.instrument.id)
+          .playNote(note.varNote.pitch, note.varNote.volume, absTime);
+    }
+  };
 
   return {
     play(): void {
@@ -248,13 +269,11 @@ export const createSequencer: (
             currentAbsTime +
             playheadPosToAbsTime(e.startTime - currentPlayheadPos);
 
-          const note = instruments
-            .get(e.instrument)
-            .playNote(e.pitch, e.volume, eventAbsTime);
+          const note = playNote(e, eventAbsTime);
 
           currentlyPlayingNotes.push({
             ...note,
-            noteOffPlayheadPos: e.startTime + 0.9 * e.duration,
+            noteOffPlayheadPos: e.startTime + e.varNote.duration, // * 0.9
           });
         });
 
