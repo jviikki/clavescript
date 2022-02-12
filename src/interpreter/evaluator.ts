@@ -56,9 +56,19 @@ type VariableBuiltInFunction = {
   value: (...args: VariableValue[]) => VariableValue;
 };
 type VariableBoolean = {type: 'boolean'; value: boolean};
-type VariableArray = {type: 'array'; items: VariableValue[]};
+export type VariableArray = {type: 'array'; items: VariableValue[]};
 type VariableNil = {type: 'nil'};
 export type VariableString = {type: 'string'; value: string};
+type VariableInstrument = VariableMidiInstrument | VariableWebAudioInstrument;
+type VariableMidiInstrument = {
+  type: 'midi_instrument';
+  output: WebMidi.MIDIOutput;
+  channel: number;
+};
+type VariableWebAudioInstrument = {
+  type: 'audio_instrument';
+  id: string;
+};
 
 export type VariableValue =
   | VariableNumber
@@ -69,7 +79,8 @@ export type VariableValue =
   | VariableBoolean
   | VariableArray
   | VariableNil
-  | VariableString;
+  | VariableString
+  | VariableInstrument;
 
 export type Environment = {
   extend(): Environment;
