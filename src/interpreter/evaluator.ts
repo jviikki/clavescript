@@ -69,6 +69,13 @@ type VariableWebAudioInstrument = {
   type: 'audio_instrument';
   id: string;
 };
+export type VariableNote = {
+  type: 'note';
+  instrument: VariableInstrument;
+  pitch: number;
+  volume: number;
+  duration: number;
+};
 
 export type VariableValue =
   | VariableNumber
@@ -80,7 +87,8 @@ export type VariableValue =
   | VariableArray
   | VariableNil
   | VariableString
-  | VariableInstrument;
+  | VariableInstrument
+  | VariableNote;
 
 export type Environment = {
   extend(): Environment;

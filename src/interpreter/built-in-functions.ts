@@ -55,6 +55,23 @@ export const initializeBuiltInFunctions: (
       return {type: 'string', value: val.value.toString(10)};
     if (val.type === 'boolean')
       return {type: 'string', value: val.value.toString()};
+    if (val.type === 'audio_instrument')
+      return {type: 'string', value: `audio_instrument(${val.id})`};
+    if (val.type === 'midi_instrument')
+      return {
+        type: 'string',
+        value: `midi_instrument(output="${val.output.name}",channel=${val.channel})`,
+      };
+    if (val.type === 'note')
+      return {
+        type: 'string',
+        value: `note(${
+          convertToString(val.instrument).value
+        },p=${val.pitch.toString(10)},v=${val.volume.toString(
+          10
+        )},d=${val.duration.toString(10)})`,
+      };
+
     if (val.type === 'array')
       return {
         type: 'string',
@@ -144,7 +161,41 @@ export const initializeBuiltInFunctions: (
       return {
         type: 'midi_instrument',
         output: output,
-        channel: 0,
+        channel: channel.value,
+      };
+    },
+  });
+
+  globalEnv.set('note', {
+    type: 'internal',
+    name: 'note',
+    value: (
+      instrument: VariableValue,
+      pitch: VariableValue,
+      volume: VariableValue,
+      duration: VariableValue
+    ) => {
+      if (
+        instrument.type !== 'midi_instrument' &&
+        instrument.type !== 'audio_instrument'
+      )
+        throw Error('Invalid instrument');
+
+      if (pitch.type !== 'number' || !Number.isInteger(pitch.value))
+        throw Error('Pitch must be an integer');
+
+      if (volume.type !== 'number' || !Number.isInteger(volume.value))
+        throw Error('Volume must be an integer');
+
+      if (duration.type !== 'number')
+        throw Error('Duration must be an integer');
+
+      return {
+        type: 'note',
+        instrument: instrument,
+        pitch: pitch.value,
+        volume: volume.value,
+        duration: duration.value,
       };
     },
   });
