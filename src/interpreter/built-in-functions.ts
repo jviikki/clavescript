@@ -146,10 +146,10 @@ export const initializeBuiltInFunctions: (
       if (
         channel.type !== 'number' ||
         !Number.isInteger(channel.value) ||
-        channel.value < 0 ||
-        channel.value > 15
+        channel.value < 1 ||
+        channel.value > 16
       ) {
-        throw Error('MIDI channel must be an integer between 0 - 15');
+        throw Error('MIDI channel must be an integer between 1 - 16');
       }
 
       const midi = getMidiAccess();
@@ -161,7 +161,7 @@ export const initializeBuiltInFunctions: (
       return {
         type: 'midi_instrument',
         output: output,
-        channel: channel.value,
+        channel: channel.value - 1,
       };
     },
   });
@@ -181,14 +181,24 @@ export const initializeBuiltInFunctions: (
       )
         throw Error('Invalid instrument');
 
-      if (pitch.type !== 'number' || !Number.isInteger(pitch.value))
-        throw Error('Pitch must be an integer');
+      if (
+        pitch.type !== 'number' ||
+        !Number.isInteger(pitch.value) ||
+        pitch.value < 0 ||
+        pitch.value > 127
+      )
+        throw Error('Pitch must be an integer in range 0 - 127');
 
-      if (volume.type !== 'number' || !Number.isInteger(volume.value))
-        throw Error('Volume must be an integer');
+      if (
+        volume.type !== 'number' ||
+        !Number.isInteger(volume.value) ||
+        pitch.value < 0 ||
+        pitch.value > 127
+      )
+        throw Error('Volume must be an integerin range 0 - 127');
 
-      if (duration.type !== 'number')
-        throw Error('Duration must be an integer');
+      if (duration.type !== 'number' || duration.value < 0)
+        throw Error('Duration must be an positive number');
 
       return {
         type: 'note',
