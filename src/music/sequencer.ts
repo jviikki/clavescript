@@ -9,6 +9,7 @@ export type MusicalEvent = Note | PitchBend;
 export type Note = {
   type: 'NOTE';
   startTime: number; // 1 is one beat, i.e quarter note
+  // varNote: VariableNote;
   instrument: string;
   pitch: number; // absolute pitch 0 - 128
   duration: number; // 1 equals one beat, i.e quarter note
