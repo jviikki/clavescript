@@ -63,7 +63,7 @@ type VariableInstrument = VariableMidiInstrument | VariableWebAudioInstrument;
 type VariableMidiInstrument = {
   type: 'midi_instrument';
   output: WebMidi.MIDIOutput;
-  channel: number;
+  channel: number; // 0 - 15
 };
 type VariableWebAudioInstrument = {
   type: 'audio_instrument';
@@ -72,9 +72,9 @@ type VariableWebAudioInstrument = {
 export type VariableNote = {
   type: 'note';
   instrument: VariableInstrument;
-  pitch: number;
-  volume: number;
-  duration: number;
+  pitch: number; // absolute pitch 0 - 127
+  volume: number; // 0-127 (more or less the same as
+  duration: number; // 1 equals one beat, i.e quarter note
 };
 
 export type VariableValue =
@@ -265,26 +265,29 @@ export const createEvaluator: (
   };
 
   function* evaluatePlay(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
-    const pitch = yield* evaluateExpression(ctx, stmt.arg);
-    if (pitch.type !== 'number')
-      throw Error('Play only accepts a number as argument');
-
-    // ctx.seq.push({
-    //   type: 'NOTE',
-    //   startTime: ctx.playheadPosition,
-    //   duration: 0.25,
-    //   volume: 64,
-    //   pitch: pitch.value,
-    //   instrument: 'audio',
-    // });
-    ctx.seq.push({
-      type: 'NOTE',
-      startTime: ctx.playheadPosition,
-      duration: 0.25,
-      volume: 64,
-      pitch: pitch.value,
-      instrument: 'midi',
-    });
+    const note = yield* evaluateExpression(ctx, stmt.arg);
+    if (note.type === 'number') {
+      ctx.seq.push({
+        type: 'NOTE',
+        startTime: ctx.playheadPosition,
+        varNote: {
+          type: 'note',
+          instrument: {
+            type: 'audio_instrument',
+            id: 'audio',
+          },
+          duration: 0.25,
+          volume: 64,
+          pitch: note.value,
+        },
+      });
+    } else if (note.type === 'note') {
+      ctx.seq.push({
+        type: 'NOTE',
+        startTime: ctx.playheadPosition,
+        varNote: note,
+      });
+    }
   }
 
   function* evaluateSleep(ctx: Context, stmt: BuiltInCommand): EventGen<void> {
@@ -493,20 +496,19 @@ export const createEvaluator: (
       }
       seq.push({
         type: 'NOTE',
-        duration: 0.25,
-        instrument: 'audio',
-        pitch: pitch,
-        volume: 64,
         startTime: startTime,
+        varNote: {
+          type: 'note',
+          instrument: {
+            type: 'audio_instrument',
+            id: 'audio',
+          },
+          duration: 0.25,
+          volume: 64,
+          pitch: pitch,
+        },
       });
-      seq.push({
-        type: 'NOTE',
-        duration: 0.25,
-        instrument: 'midi',
-        pitch: pitch,
-        volume: 64,
-        startTime: startTime,
-      });
+
       startTime += 0.25;
     });
     return seq;
@@ -533,7 +535,7 @@ export const createEvaluator: (
 
     const lastNote = seqLeft[seqLeft.length - 1];
     if (lastNote.type === 'PITCH_BEND') return seqRight; // TODO: find last note
-    const offset = lastNote.startTime + lastNote.duration;
+    const offset = lastNote.startTime + lastNote.varNote.duration;
 
     return seqLeft.concat(
       seqRight.map(n => {
@@ -660,7 +662,7 @@ export const createEvaluator: (
 
     const lastNote = left.value[left.value.length - 1];
     if (lastNote.type === 'PITCH_BEND') return right; // TODO: find last note
-    const offset = lastNote.startTime + lastNote.duration;
+    const offset = lastNote.startTime + lastNote.varNote.duration;
 
     return {
       type: 'sequence',
