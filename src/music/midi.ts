@@ -11,6 +11,7 @@ export type MIDIAccess = {
   listOutputs(): WebMidi.MIDIOutputMap;
   playNote(
     output: WebMidi.MIDIOutput,
+    channel: number,
     pitch: AbsPitch,
     velocity: number,
     time?: number
@@ -37,6 +38,7 @@ export const initMIDIAccess: (
 
     playNote(
       output: MIDIOutput,
+      channel: number,
       pitch: AbsPitch,
       velocity: number,
       time?: number
@@ -53,7 +55,7 @@ export const initMIDIAccess: (
 
       const startTime = calculateStartTime();
 
-      output.send([0x90, pitch, velocity], startTime);
+      output.send([0x90 | channel, pitch, velocity], startTime);
 
       return {
         stop: (time?: number) => {
@@ -61,7 +63,7 @@ export const initMIDIAccess: (
           const now = window.performance.now();
           const clockOffset = now - getAudioContextTime() * 1000;
           output.send(
-            [0x80, pitch, velocity],
+            [0x80 | channel, pitch, velocity],
             time === undefined
               ? startTime + stopOffset
               : time * 1000 + clockOffset

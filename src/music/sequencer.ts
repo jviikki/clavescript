@@ -221,6 +221,7 @@ export const createSequencer: (
         // TODO: Add channel to MIDI note playback
         return midiAccess.playNote(
           note.varNote.instrument.output,
+          note.varNote.instrument.channel,
           note.varNote.pitch,
           note.varNote.volume,
           absTime

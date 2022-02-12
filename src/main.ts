@@ -6,11 +6,7 @@ import {createAudioManager} from './music/audio';
 import {createInstrumentLibrary} from './music/instrument';
 import {createSequencer, Sequencer} from './music/sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
-import {
-  initMIDIAccess,
-  DEFAULT_MIDI_OUTPUT_DEVICE_NAME,
-  isWebMIDISupported,
-} from './music/midi';
+import {initMIDIAccess, isWebMIDISupported} from './music/midi';
 
 const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
   input,
@@ -48,19 +44,7 @@ const setupSequencer: (logger: Logger) => Promise<Sequencer> = async logger => {
   });
 
   if (isWebMIDISupported()) {
-    const midiAccess = await initMIDIAccess(() => audio.getCurrentTime());
-
-    const defaultMidiOutput = Array.from(
-      midiAccess.listOutputs().values()
-    ).find(v => v.name === DEFAULT_MIDI_OUTPUT_DEVICE_NAME);
-
-    if (defaultMidiOutput) {
-      instruments.add('midi', {
-        playNote: (...args) => {
-          return midiAccess.playNote(defaultMidiOutput, ...args);
-        },
-      });
-    }
+    await initMIDIAccess(() => audio.getCurrentTime());
   }
 
   return createSequencer(audio, instruments, logger);
