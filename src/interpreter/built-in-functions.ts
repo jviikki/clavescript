@@ -6,6 +6,7 @@ import {
 } from './evaluator';
 import {Logger} from '../logger';
 import {getMidiAccess, isWebMIDISupported} from '../music/midi';
+import {spread} from './util';
 
 export const initializeBuiltInFunctions: (
   globalEnv: Environment,
@@ -206,6 +207,29 @@ export const initializeBuiltInFunctions: (
         pitch: pitch.value,
         volume: volume.value,
         duration: duration.value,
+      };
+    },
+  });
+
+  globalEnv.set('spread', {
+    type: 'internal',
+    name: 'spread',
+    value: (accentedBeats: VariableValue, beats: VariableValue) => {
+      if (
+        accentedBeats.type !== 'number' ||
+        !Number.isInteger(accentedBeats.value)
+      )
+        throw Error('Argument accentedBeats needs to be an integer');
+
+      if (beats.type !== 'number' || !Number.isInteger(beats.value))
+        throw Error('Argument beats needs to be an integer');
+
+      return {
+        type: 'array',
+        items: spread(accentedBeats.value, beats.value).map(isAccent => ({
+          type: 'boolean',
+          value: isAccent,
+        })),
       };
     },
   });
