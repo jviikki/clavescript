@@ -7,12 +7,13 @@ import {createInstrumentLibrary} from './music/instrument';
 import {createSequencer, Sequencer} from './music/sequencer';
 import {createLogger, LogMessage, Logger} from './logger';
 import {initMIDIAccess, isWebMIDISupported} from './music/midi';
+import getWabt from 'wabt';
 
-const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
-  input,
-  evaluator,
-  log
-) => {
+const execute: (
+  input: string,
+  evaluator: Evaluator,
+  log: Logger
+) => void = async (input, evaluator, log) => {
   console.log('Code to evaluate: ', input);
   log.i('Evaluating program...');
 
@@ -24,10 +25,26 @@ const execute: (input: string, evaluator: Evaluator, log: Logger) => void = (
   //   if (t.type === 'error') break;
   // }
 
+  const wabt = await getWabt();
+  const watInput =
+    '(module (func (export "add") (param i32 i32) (result i32) (i32.add (local.get 0) (local.get 1))))';
+  const module = wabt.parseWat('test.wat', watInput);
+  const {buffer} = module.toBinary({});
+  console.log(buffer);
+
+  // run the WebAssembly module and call the add function
+  const obj = await WebAssembly.instantiate(buffer);
+  type AddModule = {
+    add: (a: number, b: number) => number;
+  };
+  const exports = obj.instance.exports as AddModule;
+  console.log(exports.add(1, 2)); // 3
+
   try {
     const program = parse(tokenizer);
     console.log(program);
-    evaluator.evaluate(program);
+    // evaluator.evaluate(program);
+
     log.i('Evaluation successful');
   } catch (e) {
     console.log(e);
@@ -101,19 +118,19 @@ const setupUI = async () => {
   }
 
   const codeArea = document.getElementById('code') as HTMLTextAreaElement;
-  codeArea.addEventListener('keydown', e => {
+  codeArea.addEventListener('keydown', async e => {
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
 
-      execute(codeArea.value, evaluator, logger);
+      await execute(codeArea.value, evaluator, logger);
     }
   });
 
   const runButton = document.getElementsByClassName(
     'run-button'
   )[0] as HTMLButtonElement;
-  runButton.addEventListener('click', () => {
-    execute(codeArea.value, evaluator, logger);
+  runButton.addEventListener('click', async () => {
+    await execute(codeArea.value, evaluator, logger);
   });
 
   const stopButton = document.getElementsByClassName('stop-button')[0];

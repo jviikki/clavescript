@@ -24,6 +24,7 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+    fallback: {path: false, fs: false},
   },
   output: {
     filename: 'bundle.js',
